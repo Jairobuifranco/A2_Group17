@@ -3,96 +3,163 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Local Concerts — Create Event</title>
+  <title>Local Concerts — {{ page_title or 'Create Event' }}</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
-  <link rel="stylesheet" href="static/style/styles.css"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style/styles.css') }}"/>
 </head>
 <body>
   <!--Navbar-->
   <nav class="navbar navbar-expand-lg bg-white border-bottom">
     <div class="container">
-      <a class="navbar-brand fw-bold" href="index.html"><i class="bi bi-music-note-beamed me-1"></i>Local<span>Concerts</span></a>
+      <a class="navbar-brand fw-bold" href="{{ url_for('main.index') }}"><i class="bi bi-music-note-beamed me-1"></i>Local<span>Concerts</span></a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain"><span class="navbar-toggler-icon"></span></button>
       <div class="collapse navbar-collapse" id="navMain">
         <ul class="navbar-nav me-auto">
-          <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
-          <li class="nav-item"><a class="nav-link active" href="create.html" aria-current="page">Create Event</a></li>
-          <li class="nav-item"><a class="nav-link" href="bookings.html">Bookings</a></li>
+          <li class="nav-item">
+            <a class="nav-link{% if active_nav == 'home' %} active{% endif %}" href="{{ url_for('main.index') }}"
+               {% if active_nav == 'home' %}aria-current="page"{% endif %}>Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link{% if active_nav in ['create', 'edit'] %} active{% endif %}" href="{{ url_for('main.create_event') }}"
+               {% if active_nav in ['create', 'edit'] %}aria-current="page"{% endif %}>Create Event</a>
+          </li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('main.bookings') }}">Bookings</a></li>
         </ul>
-        <!-- Logged-in indicator -->
-        <span class="badge text-bg-success">Logged in</span>
+        <div class="ms-3 d-flex align-items-center gap-2">
+          {% if current_user.is_authenticated %}
+            <span class="badge text-bg-success">Signed in as {{ current_user.name }}</span>
+            <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('auth.logout') }}">Log out</a>
+          {% else %}
+            <a class="btn btn-primary btn-sm" href="{{ url_for('auth.login') }}">Log in</a>
+            <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('auth.login', tab='register') }}">Sign up</a>
+          {% endif %}
+        </div>
       </div>
     </div>
   </nav>
-  <!--Create Event form-->
+
   <main class="container py-4">
-    <h3 class="mb-3">Create / Update Event</h3>
-    <form class="needs-validation" novalidate action="index.html" method="get">
-      <div class="row g-3">
-        <div class="col-12 col-md-6">
-          <label class="form-label">Event Name</label>
-          <input type="text" class="form-control" required>
-          <div class="invalid-feedback">Please enter an event name.</div>
+    <div class="row justify-content-center">
+      <div class="col-12 col-lg-10">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h3 class="mb-0">{{ page_heading or 'Create a New Event' }}</h3>
+            <p class="text-muted mb-0 small">{{ page_subheading or 'Provide the event details below and publish instantly.' }}</p>
+          </div>
+          <a class="btn btn-outline-secondary btn-sm" href="{{ back_url or url_for('main.index') }}"><i class="bi bi-arrow-left-short"></i> {{ back_label or 'Back to Events' }}</a>
         </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label">Venue</label>
-          <input type="text" class="form-control" required>
-          <div class="invalid-feedback">Please enter a venue.</div>
-        </div>
-        <div class="col-12">
-          <label class="form-label">Description</label>
-          <textarea class="form-control" rows="3" required></textarea>
-          <div class="invalid-feedback">Please add a short description.</div>
-        </div>
-        <div class="col-6 col-md-3">
-          <label class="form-label">Date</label>
-          <input type="date" class="form-control" required>
-          <div class="invalid-feedback">Pick a date.</div>
-        </div>
-        <div class="col-6 col-md-3">
-          <label class="form-label">Start Time</label>
-          <input type="time" class="form-control" required>
-          <div class="invalid-feedback">Start time required.</div>
-        </div>
-        <div class="col-6 col-md-3">
-          <label class="form-label">End Time</label>
-          <input type="time" class="form-control" required>
-          <div class="invalid-feedback">End time required.</div>
-        </div>
-        <div class="col-6 col-md-3">
-          <label class="form-label">Price (AUD)</label>
-          <input type="number" min="0" step="0.01" class="form-control" required>
-          <div class="invalid-feedback">Enter a valid price.</div>
-        </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label">Category</label>
-          <select class="form-select">
-            <option>Electronic</option><option>Rock</option><option>Jazz</option>
-            <option>Classical</option><option>Latin</option>
-          </select>
-        </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label">Status</label>
-          <select class="form-select" required>
-            <option>Open</option><option>Inactive</option><option>Sold Out</option><option>Cancelled</option>
-          </select>
-          <div class="invalid-feedback">Select a status.</div>
-        </div>
-        <div class="col-12 col-md-6">
-          <label class="form-label">Image URL</label>
-          <input type="url" class="form-control" placeholder="static/img/neon.jpg" required>
-          <div class="invalid-feedback">Provide an image URL.</div>
+
+        {% with messages = get_flashed_messages(with_categories=True) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              {% set alert_class = category if category in ['primary','secondary','success','danger','warning','info','light','dark'] else 'info' %}
+              <div class="alert alert-{{ alert_class }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <form method="post" action="{{ form_action or url_for('main.create_event') }}" novalidate>
+              {{ form.hidden_tag() }}
+              <div class="row g-3">
+                <div class="col-12 col-md-6">
+                  {% set title_classes = 'form-control' + (' is-invalid' if form.title.errors else '') %}
+                  {{ form.title.label(class_='form-label') }}
+                  {{ form.title(class_=title_classes, placeholder='City Lights Festival') }}
+                  {% if form.title.errors %}
+                    <div class="invalid-feedback d-block">{{ form.title.errors[0] }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-12 col-md-6">
+                  {% set venue_classes = 'form-control' + (' is-invalid' if form.venue.errors else '') %}
+                  {{ form.venue.label(class_='form-label') }}
+                  {{ form.venue(class_=venue_classes, placeholder='Riverstage, Brisbane') }}
+                  {% if form.venue.errors %}
+                    <div class="invalid-feedback d-block">{{ form.venue.errors[0] }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-12">
+                  {% set desc_classes = 'form-control' + (' is-invalid' if form.description.errors else '') %}
+                  {{ form.description.label(class_='form-label') }}
+                  {{ form.description(class_=desc_classes, rows='4', placeholder='Tell attendees what makes this show special...') }}
+                  {% if form.description.errors %}
+                    <div class="invalid-feedback d-block">{{ form.description.errors[0] }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-6 col-md-3">
+                  {% set date_classes = 'form-control' + (' is-invalid' if form.start_date.errors else '') %}
+                  {{ form.start_date.label(class_='form-label') }}
+                  {{ form.start_date(class_=date_classes) }}
+                  {% if form.start_date.errors %}
+                    <div class="invalid-feedback d-block">{{ form.start_date.errors[0] }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-6 col-md-3">
+                  {% set start_time_classes = 'form-control' + (' is-invalid' if form.start_time.errors else '') %}
+                  {{ form.start_time.label(class_='form-label') }}
+                  {{ form.start_time(class_=start_time_classes) }}
+                  {% if form.start_time.errors %}
+                    <div class="invalid-feedback d-block">{{ form.start_time.errors[0] }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-6 col-md-3">
+                  {% set end_time_classes = 'form-control' + (' is-invalid' if form.end_time.errors else '') %}
+                  {{ form.end_time.label(class_='form-label') }}
+                  {{ form.end_time(class_=end_time_classes) }}
+                  {% if form.end_time.errors %}
+                    <div class="invalid-feedback d-block">{{ form.end_time.errors[0] }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-6 col-md-3">
+                  {% set price_classes = 'form-control' + (' is-invalid' if form.price.errors else '') %}
+                  {{ form.price.label(class_='form-label') }}
+                  {{ form.price(class_=price_classes, step='0.01', min='0', placeholder='39.00') }}
+                  {% if form.price.errors %}
+                    <div class="invalid-feedback d-block">{{ form.price.errors[0] }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-12 col-md-6">
+                  {% set category_classes = 'form-select' + (' is-invalid' if form.category.errors else '') %}
+                  {{ form.category.label(class_='form-label') }}
+                  {{ form.category(class_=category_classes) }}
+                  {% if form.category.errors %}
+                    <div class="invalid-feedback d-block">{{ form.category.errors[0] }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-12 col-md-6">
+                  {% set status_classes = 'form-select' + (' is-invalid' if form.status.errors else '') %}
+                  {{ form.status.label(class_='form-label') }}
+                  {{ form.status(class_=status_classes) }}
+                  {% if form.status.errors %}
+                    <div class="invalid-feedback d-block">{{ form.status.errors[0] }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-12 col-md-6">
+                  {% set image_classes = 'form-control' + (' is-invalid' if form.image_url.errors else '') %}
+                  {{ form.image_url.label(class_='form-label') }}
+                  {{ form.image_url(class_=image_classes, placeholder='img/hero1.jpg') }}
+                  {% if form.image_url.errors %}
+                    <div class="invalid-feedback d-block">{{ form.image_url.errors[0] }}</div>
+                  {% endif %}
+                  <div class="form-text">Use a relative path like <code>img/neon.jpg</code> or paste an absolute URL.</div>
+                </div>
+              </div>
+              <div class="d-flex gap-2 mt-4">
+                {{ form.submit(class_='btn btn-primary') }}
+                <a class="btn btn-outline-secondary" href="{{ url_for('main.index') }}">Cancel</a>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
-      <div class="d-flex gap-2 mt-4">
-        <button class="btn btn-primary" type="submit"><i class="bi bi-check2"></i> Save Event</button>
-        <a class="btn btn-outline-secondary" href="index.html">Cancel</a>
-      </div>
-      <div class="form-text mt-2">Submitting returns to Home page.</div>
-    </form>
+    </div>
   </main>
-  <!--Footer-->
+
   <footer class="py-4 bg-white border-top">
     <div class="container d-flex justify-content-between align-items-center">
       <span class="text-muted small">&copy; <span>2025</span> LocalConcerts</span>

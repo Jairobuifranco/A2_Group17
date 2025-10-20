@@ -17,13 +17,18 @@
       <div class="collapse navbar-collapse" id="navMain">
         <ul class="navbar-nav me-auto">
           <li class="nav-item"><a class="nav-link" href="{{ url_for('main.index') }}">Home</a></li>
-          <li class="nav-item"><a class="nav-link" href="create.html">Create Event</a></li>
-          <li class="nav-item"><a class="nav-link" href="bookings.html">Bookings</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('main.create_event') }}">Create Event</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('main.bookings') }}">Bookings</a></li>
         </ul>
         <!-- Auth buttons  -->
-        <div class="ms-3 d-flex gap-2">
-          <a class="btn btn-outline-secondary btn-sm" href="#">Log in</a>
-          <a class="btn btn-primary btn-sm" href="#">Sign up</a>
+        <div class="ms-3 d-flex align-items-center gap-2">
+          {% if current_user.is_authenticated %}
+            <span class="badge text-bg-success">Signed in as {{ current_user.name }}</span>
+            <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('auth.logout') }}">Log out</a>
+          {% else %}
+            <a class="btn btn-primary btn-sm{% if active_tab != 'register' %} active{% endif %}" aria-current="{{ 'page' if active_tab != 'register' else 'false' }}" href="{{ url_for('auth.login') }}">Log in</a>
+            <a class="btn btn-outline-secondary btn-sm{% if active_tab == 'register' %} active{% endif %}" aria-current="{{ 'page' if active_tab == 'register' else 'false' }}" href="{{ url_for('auth.login', tab='register') }}">Sign up</a>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -45,8 +50,9 @@
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-start mb-2">
               <h3 class="mb-0">{{ event.title }}</h3>
-              {% if event.status %}
-              {% set status_lower = event.status|lower %}
+              {% set status_label = event.display_status %}
+              {% if status_label %}
+              {% set status_lower = status_label|lower %}
               {% set badge_class = 'secondary' %}
               {% if 'open' in status_lower %}
                 {% set badge_class = 'success' %}
@@ -54,8 +60,10 @@
                 {% set badge_class = 'danger' %}
               {% elif 'cancel' in status_lower %}
                 {% set badge_class = 'dark' %}
+              {% elif 'expired' in status_lower %}
+                {% set badge_class = 'secondary' %}
               {% endif %}
-              <span class="badge text-bg-{{ badge_class }}">{{ event.status }}</span>
+              <span class="badge text-bg-{{ badge_class }}">{{ status_label }}</span>
               {% endif %}
             </div>
             <p class="mb-1"><i class="bi bi-calendar-event"></i> <strong>Date:</strong> {{ event.start_time.strftime('%Y-%m-%d') if event.start_time else 'TBA' }}</p>
@@ -70,25 +78,45 @@
             <div class="mb-3"><span class="badge text-bg-light border"><i class="bi bi-currency-dollar"></i> {{ '{:.2f}'.format(event.price) if event.price is not none else '0.00' }} per ticket</span></div>
 
             <!-- Booking, links to Bookings page after) -->
-            <div class="row g-2 align-items-end">
-              <div class="col-6">
-                <label class="form-label">Tickets</label>
-                <select class="form-select">
-                  <option>1</option><option>2</option><option>3</option><option>4</option>
-                  <option>5</option><option>6</option><option>7</option><option>8</option>
-                </select>
+            {% if event.is_expired %}
+              <div class="alert alert-warning mb-0" role="alert">
+                <i class="bi bi-hourglass-bottom me-1"></i>This event has already concluded. Bookings are closed.
               </div>
-              <div class="col-6">
-                <label class="form-label">Type</label>
-                <select class="form-select">
-                  <option>General</option><option>VIP</option>
-                </select>
-              </div>
-            </div>
-            <a href="bookings.html" class="btn btn-primary w-100 mt-3">
-              <i class="bi bi-ticket-perforated"></i> Book Now
-            </a>
-            <div class="form-text mt-2">This takes you to Booking History.</div>
+            {% else %}
+              {% if current_user.is_authenticated %}
+                <form method="post" action="{{ url_for('main.book_event', event_id=event.id) }}" class="mt-2">
+                  {{ booking_form.hidden_tag() }}
+                  <div class="row g-2 align-items-end">
+                    <div class="col-12 col-sm-6">
+                      {% set quantity_classes = 'form-select' + (' is-invalid' if booking_form.quantity.errors else '') %}
+                      {{ booking_form.quantity.label(class_='form-label') }}
+                      {{ booking_form.quantity(class_=quantity_classes) }}
+                      {% if booking_form.quantity.errors %}
+                        <div class="invalid-feedback d-block">{{ booking_form.quantity.errors[0] }}</div>
+                      {% endif %}
+                    </div>
+                    <div class="col-12 col-sm-6">
+                      <label class="form-label">Ticket Type</label>
+                      <div class="form-control bg-light">General Admission</div>
+                      <div class="form-text">Single-tier tickets for this prototype.</div>
+                    </div>
+                  </div>
+                  <div class="d-grid mt-3">
+                    {{ booking_form.submit(class_='btn btn-primary') }}
+                  </div>
+                  <div class="form-text mt-2">Your booking appears instantly in the Bookings page.</div>
+                </form>
+              {% else %}
+                <a href="{{ url_for('auth.login', next=url_for('main.event', event_id=event.id)) }}" class="btn btn-primary w-100 mt-2">
+                  <i class="bi bi-box-arrow-in-right me-1"></i> Log in to Book
+                </a>
+              {% endif %}
+            {% endif %}
+            {% if current_user.is_authenticated %}
+              <a href="{{ url_for('main.edit_event', event_id=event.id) }}" class="btn btn-outline-secondary w-100 mt-3">
+                <i class="bi bi-pencil"></i> Edit Event
+              </a>
+            {% endif %}
           </div>
         </div>
 
