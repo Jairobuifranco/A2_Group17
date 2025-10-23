@@ -1,7 +1,7 @@
 # import flask - from 'package' import 'Class'
 from flask import Flask 
 try:
-    from bootstrap_flask import Bootstrap5
+    from flask_bootstrap import Bootstrap5
 except ModuleNotFoundError:
     Bootstrap5 = None
 from flask_sqlalchemy import SQLAlchemy
@@ -38,10 +38,12 @@ def create_app():
     from .models import User
     @login_manager.user_loader
     def load_user(user_id):
-       return db.session.scalar(db.select(User).where(User.id==user_id))
+       return db.session.get(User, int(user_id))
 
     from . import views
     app.register_blueprint(views.main_bp)
+    # register blueprint
+    app.register_blueprint(views.events_bp, url_prefix='/events')
 
     try:
         from . import auth

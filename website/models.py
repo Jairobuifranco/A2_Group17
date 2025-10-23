@@ -23,9 +23,15 @@ class Event(db.Model):
     start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=False)
     price = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+    ticket_quantity = db.Column(db.Integer, nullable=False, default=1)
+    capacity = db.Column(db.Integer, nullable=False, default=1)
     status = db.Column(db.String(40), nullable=False, default='Open')
     category = db.Column(db.String(60))
     image_url = db.Column(db.String(255))
+
+    # Add user id into event table as FK
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, default=1)
+    user = db.relationship('User', backref='events')
 
     comments = db.relationship('Comment', back_populates='event', cascade='all, delete-orphan')
     orders = db.relationship('Order', back_populates='event', cascade='all, delete-orphan')

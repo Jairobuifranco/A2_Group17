@@ -26,9 +26,29 @@ def login():
             login_user(user)
             nextp = request.args.get('next') # this gives the url from where the login page was accessed
             print(nextp)
-            if next is None or not nextp.startswith('/'):
-                return redirect(url_for('index'))
+            if nextp is None or not nextp.startswith('/'):
+                return redirect(url_for('main.index'))
             return redirect(nextp)
         else:
             flash(error)
-    return render_template('user.html', form=login_form, heading='Login')
+    # Ask user to register before login
+    return render_template('user.html', login_form=login_form, register_form=RegisterForm(), active_tab='Login', heading='Login')
+
+# User register function
+@auth_bp.route('/register', methods=['GET', 'POST'])
+def register():
+    register_form = RegisterForm()
+    if register_form.validate_on_submit():
+        hashed_password = generate_password_hash(register_form.password.data)
+        new_user = User(
+            name=register_form.user_name.data,
+            email=register_form.email.data,
+            password_hash=hashed_password
+        )
+        db.session.add(new_user)
+        db.session.commit()
+        flash('Account is ready to log in.', 'success')
+        # return to login 
+        return redirect(url_for('auth.login'))
+    return render_template('user.html', register_form=register_form, login_form=LoginForm(), active_tab='register', heading='Register')
+
