@@ -22,7 +22,7 @@
         <ul class="navbar-nav me-auto">
           <li class="nav-item"><a class="nav-link active" href="{{ url_for('main.index') }}" aria-current="page">Home</a></li>
           <li class="nav-item"><a class="nav-link" href="create.html">Create Event</a></li>
-          <li class="nav-item"><a class="nav-link" href="bookings.html">Bookings</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('main.bookings') }}">Bookings</a></li>
           <!-- Genres dropdown -->
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Genres</a>
@@ -147,8 +147,24 @@
                 <p class="mb-2"><i class="bi bi-geo-alt"></i> {{ event.venue }}</p>
                 <span class="badge text-bg-light border badge-price"><i class="bi bi-currency-dollar"></i> {{ '{:.2f}'.format(event.price) if event.price is not none else '0.00' }}</span>
               </div>
-              <div class="card-footer bg-white border-0">
-                <a href="{{ url_for('main.event', event_id=event.id) }}" class="btn btn-primary w-100">View Details</a>
+              <div class="card-footer bg-white border-0 d-grid gap-2">
+  <!-- details link -->
+                <a href="{{ url_for('main.event', event_id=event.id) }}" class="btn btn-outline-primary">View Details</a>
+
+  <!-- POST to create booking -->
+                {% set is_open = (event.status|lower == 'open') %}
+
+                <form method="post" action="{{ url_for('main.create_order', event_id=event.id) }}">
+                  <input type="hidden" name="user_id" value="1">
+                  <input type="hidden" name="qty" value="1">
+                  <input type="hidden" name="ticket_type" value="General">
+                  <button
+                    class="btn btn-primary w-100"
+                    {% if not is_open %}disabled aria-disabled="true" style="opacity:0.6; cursor:not-allowed;"{% endif %}
+                  >
+                    Book now
+                  </button>
+                </form>
               </div>
             </div>
           </div>

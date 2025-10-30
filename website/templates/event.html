@@ -3,123 +3,239 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Local Concerts — {{ event.title if event else 'Event' }}</title>
+  <title>{{ event.title }} — Local Concerts</title>
+
+  <!-- bootstrap css, icons, and our stylesheet -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
   <link rel="stylesheet" href="{{ url_for('static', filename='style/styles.css') }}"/>
 </head>
 <body>
-  <!--Navbar-->
+
+  <!-- top navbar with site name, nav links, and fake login buttons -->
   <nav class="navbar navbar-expand-lg bg-white border-bottom">
     <div class="container">
-      <a class="navbar-brand fw-bold" href="{{ url_for('main.index') }}"><i class="bi bi-music-note-beamed me-1"></i>Local<span>Concerts</span></a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain"><span class="navbar-toggler-icon"></span></button>
+      <a class="navbar-brand fw-bold" href="{{ url_for('main.index') }}">
+        <i class="bi bi-music-note-beamed me-1"></i>Local<span>Concerts</span>
+      </a>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
       <div class="collapse navbar-collapse" id="navMain">
         <ul class="navbar-nav me-auto">
           <li class="nav-item"><a class="nav-link" href="{{ url_for('main.index') }}">Home</a></li>
           <li class="nav-item"><a class="nav-link" href="create.html">Create Event</a></li>
-          <li class="nav-item"><a class="nav-link" href="bookings.html">Bookings</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('main.bookings') }}">Bookings</a></li>
         </ul>
-        <!-- Auth buttons  -->
-        <div class="ms-3 d-flex gap-2">
+
+        <!-- these buttons are just UI placeholders, not real auth -->
+        <div class="d-none d-md-flex gap-2">
           <a class="btn btn-outline-secondary btn-sm" href="#">Log in</a>
           <a class="btn btn-primary btn-sm" href="#">Sign up</a>
         </div>
       </div>
     </div>
   </nav>
-  <!--Static example-->
+
   <main class="container py-4">
+
+    <!-- flash area: shows messages like "only 3 tickets left" or "booking created" -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-3">
+          {% for cat, msg in messages %}
+            <div class="alert alert-{{ 'warning' if cat == 'warning' else 'success' }} mb-2">
+              {{ msg }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
     <div class="row g-4">
-      <div class="col-lg-7">
-        <img src="{{ event_image_url }}" alt="{{ event.title }}" class="img-fluid rounded mb-3 w-100">
+      <!-- left column: hero image and about/description -->
+      <div class="col-lg-8">
+
+        <!-- main event image (fallback is handled in the backend if none set) -->
+        <div class="ratio ratio-16x9 mb-3">
+          <img
+            src="{{ event_image_url }}"
+            alt="{{ event.title }}"
+            class="w-100 h-100 rounded"
+            style="object-fit: cover;"
+          />
+        </div>
+
+        <!-- about this event / description text -->
         <div class="card">
+          <div class="card-header fw-semibold">About this event</div>
           <div class="card-body">
-            <h4 class="card-title">About this event</h4>
-            <p class="mb-0">{{ event.description }}</p>
+            {% if event.description %}
+              <p class="mb-0">{{ event.description }}</p>
+            {% else %}
+              <p class="mb-0 text-muted">Event details coming soon.</p>
+            {% endif %}
           </div>
         </div>
       </div>
-      <div class="col-lg-5">
+
+      <!-- right column: event details, booking box, comments -->
+      <div class="col-lg-4">
+
+        <!-- event info card (title, status, date, time, venue, price, booking form / closed state) -->
         <div class="card">
           <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-              <h3 class="mb-0">{{ event.title }}</h3>
-              {% if event.status %}
-              {% set status_lower = event.status|lower %}
-              {% set badge_class = 'secondary' %}
-              {% if 'open' in status_lower %}
-                {% set badge_class = 'success' %}
-              {% elif 'sold' in status_lower %}
-                {% set badge_class = 'danger' %}
-              {% elif 'cancel' in status_lower %}
-                {% set badge_class = 'dark' %}
-              {% endif %}
-              <span class="badge text-bg-{{ badge_class }}">{{ event.status }}</span>
-              {% endif %}
-            </div>
-            <p class="mb-1"><i class="bi bi-calendar-event"></i> <strong>Date:</strong> {{ event.start_time.strftime('%Y-%m-%d') if event.start_time else 'TBA' }}</p>
-            <p class="mb-1"><i class="bi bi-clock"></i> <strong>Time:</strong> 
-              {% if event.start_time and event.end_time %}
-                {{ event.start_time.strftime('%H:%M') }} – {{ event.end_time.strftime('%H:%M') }}
-              {% else %}
-                TBA
-              {% endif %}
-            </p>
-            <p class="mb-3"><i class="bi bi-geo-alt"></i> <strong>Venue:</strong> {{ event.venue }}</p>
-            <div class="mb-3"><span class="badge text-bg-light border"><i class="bi bi-currency-dollar"></i> {{ '{:.2f}'.format(event.price) if event.price is not none else '0.00' }} per ticket</span></div>
 
-            <!-- Booking, links to Bookings page after) -->
-            <div class="row g-2 align-items-end">
-              <div class="col-6">
-                <label class="form-label">Tickets</label>
-                <select class="form-select">
-                  <option>1</option><option>2</option><option>3</option><option>4</option>
-                  <option>5</option><option>6</option><option>7</option><option>8</option>
-                </select>
-              </div>
-              <div class="col-6">
-                <label class="form-label">Type</label>
-                <select class="form-select">
-                  <option>General</option><option>VIP</option>
-                </select>
-              </div>
+            <!-- event name and current status badge -->
+            <div class="d-flex align-items-start justify-content-between">
+              <h1 class="h4 mb-2">{{ event.title }}</h1>
+              {% if event.status %}
+                <span class="badge {{ 'text-bg-success' if event.status|lower == 'open' else 'text-bg-secondary' }}">
+                  {{ event.status }}
+                </span>
+              {% endif %}
             </div>
-            <a href="bookings.html" class="btn btn-primary w-100 mt-3">
-              <i class="bi bi-ticket-perforated"></i> Book Now
-            </a>
-            <div class="form-text mt-2">This takes you to Booking History.</div>
+
+            <!-- basic event details like date, time, venue -->
+            <ul class="list-unstyled small mb-3">
+              {% if event.start_time %}
+                <li class="mb-1">
+                  <i class="bi bi-calendar-event me-1"></i>
+                  <strong>Date:</strong> {{ event.start_time.strftime('%Y-%m-%d') }}
+                </li>
+                <li class="mb-1">
+                  <i class="bi bi-clock me-1"></i>
+                  <strong>Time:</strong>
+                  {% if event.end_time %}
+                    {{ event.start_time.strftime('%H:%M') }} – {{ event.end_time.strftime('%H:%M') }}
+                  {% else %}
+                    {{ event.start_time.strftime('%H:%M') }}
+                  {% endif %}
+                </li>
+              {% endif %}
+              {% if event.venue %}
+                <li class="mb-1">
+                  <i class="bi bi-geo-alt me-1"></i>
+                  <strong>Venue:</strong> {{ event.venue }}
+                </li>
+              {% endif %}
+            </ul>
+
+            <!-- price per ticket (only if we actually have a price) -->
+            {% if event.price is not none %}
+              <span class="badge text-bg-light border mb-3 d-inline-block">
+                <i class="bi bi-currency-dollar"></i>
+                {{ '%.2f'|format(event.price) }} per ticket
+              </span>
+            {% endif %}
+
+            <!-- booking area: if event is not open, show locked message -->
+            {% if event.status and event.status|lower != 'open' %}
+              <div class="alert alert-warning mb-3">
+                Sorry, this event is not accepting bookings.
+              </div>
+
+              <button class="btn btn-secondary w-100" disabled>
+                <i class="bi bi-lock me-1"></i> Booking Closed
+              </button>
+
+              <div class="form-text mt-2">Status: {{ event.status }}</div>
+
+            {% else %}
+              <!-- event is open, so show the booking form -->
+              <form method="post" action="{{ url_for('main.create_order', event_id=event.id) }}">
+                <div class="row g-2 mb-3">
+                  <!-- how many tickets the user wants -->
+                  <div class="col-6">
+                    <label class="form-label">Tickets</label>
+                    <input
+                      class="form-control"
+                      type="number"
+                      name="qty"
+                      min="1"
+                      value="1"
+                      required
+                    >
+                  </div>
+
+                  <!-- ticket type picker (e.g. General or VIP) -->
+                  <div class="col-6">
+                    <label class="form-label">Type</label>
+                    <select class="form-select" name="ticket_type">
+                      <option>General</option>
+                      <option>VIP</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- we don't have real login yet so user_id is hard-coded to 1 -->
+                <input type="hidden" name="user_id" value="1">
+
+                <!-- button that actually books the tickets -->
+                <button class="btn btn-primary w-100">
+                  <i class="bi bi-ticket-perforated me-1"></i> Book Now
+                </button>
+
+                <div class="form-text mt-2">
+                  This takes you to Booking History.
+                </div>
+              </form>
+            {% endif %}
           </div>
         </div>
 
-        <!-- Comments -->
+        <!-- comments card: list of comments and a box to add a new one -->
         <div class="card mt-3">
           <div class="card-body">
             <h5 class="card-title mb-3">Comments</h5>
-            <ul class="list-group mb-3">
-              {% set ordered_comments = event.comments | sort(attribute='created_at', reverse=True) %}
-              {% if ordered_comments %}
-                {% for comment in ordered_comments %}
-                  <li class="list-group-item">
-                    <strong>{{ comment.user.name if comment.user else 'Guest' }}</strong>
-                    <small class="text-muted ms-2">{{ comment.created_at.strftime('%Y-%m-%d %H:%M') if comment.created_at else '' }}</small>
-                    <div>{{ comment.body }}</div>
-                  </li>
+
+            {% if comments %}
+              <div class="list-group mb-3">
+                {% for c in comments %}
+                  <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <!-- username placeholder (we're not doing accounts yet) -->
+                      <strong>{{ c.user_name or 'User' }}</strong>
+
+                      <!-- comment timestamp, shown in Brisbane time using the filter -->
+                      <small class="text-muted">{{ c.created_at | bris }}</small>
+                    </div>
+
+                    <!-- comment text body -->
+                    <p class="mb-0">{{ c.body }}</p>
+                  </div>
                 {% endfor %}
-              {% else %}
-                <li class="list-group-item text-muted">No comments yet.</li>
-              {% endif %}
-            </ul>
-            <form class="d-grid gap-2" action="#">
-              <textarea class="form-control" rows="2" placeholder="Write a comment..." required></textarea>
-              <button class="btn btn-outline-primary" type="submit"><i class="bi bi-chat"></i> Post Comment</button>
-              </form>
-          </div>            
+              </div>
+            {% else %}
+              <div class="alert alert-light border mb-3">
+                No comments yet.
+              </div>
+            {% endif %}
+
+            <!-- form for adding a new comment -->
+            <form method="post" action="{{ url_for('main.add_comment', event_id=event.id) }}">
+              <div class="input-group">
+                <input
+                  type="text"
+                  class="form-control"
+                  name="body"
+                  placeholder="Write a comment…"
+                  required
+                >
+                {% if csrf_token is defined %}{{ csrf_token() }}{% endif %}
+                <button class="btn btn-outline-secondary">Post Comment</button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
-    </div>
+
+      </div> <!-- end right column -->
+    </div> <!-- end row -->
   </main>
-  <!--Footer-->
+
+  <!-- simple footer -->
   <footer class="py-4 bg-white border-top">
     <div class="container d-flex justify-content-between align-items-center">
       <span class="text-muted small">&copy; <span>2025</span> LocalConcerts</span>
@@ -127,6 +243,7 @@
     </div>
   </footer>
 
+  <!-- bootstrap js for dropdowns, collapse, etc -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
