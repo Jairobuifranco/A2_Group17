@@ -26,13 +26,25 @@
           <!-- Genres dropdown -->
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Genres</a>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="#">Rock</a></li>
-              <li><a class="dropdown-item" href="#">Jazz</a></li>
-              <li><a class="dropdown-item" href="#">Classical</a></li>
-              <li><a class="dropdown-item" href="#">Electronic</a></li>
-              <li><a class="dropdown-item" href="#">Latin</a></li>
-              <li><a class="dropdown-item" href="#">Hip Hop</a></li>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li>
+                <a class="dropdown-item{% if not selected_genre %} active{% endif %}"
+                   href="{{ url_for('main.index', q=search_query if search_query else None) }}">
+                  All Genres
+                </a>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              {% for genre in genres %}
+                <li>
+                  <a class="dropdown-item d-flex justify-content-between align-items-center{% if selected_genre and selected_genre.lower() == genre.lower() %} active{% endif %}"
+                     href="{{ url_for('main.index', genre=genre, q=search_query if search_query else None) }}">
+                    <span>{{ genre }}</span>
+                    {% if selected_genre and selected_genre.lower() == genre.lower() %}
+                      <i class="bi bi-check-lg"></i>
+                    {% endif %}
+                  </a>
+                </li>
+              {% endfor %}
             </ul>
           </li>
         </ul>
@@ -107,9 +119,16 @@
     <div class="container d-flex flex-wrap gap-2 align-items-center">
       <span class="text-muted small"><i class="bi bi-funnel"></i> Quick Filters:</span>
       <div class="btn-group" role="group" aria-label="Filters">
-        <a class="btn btn-outline-secondary btn-sm" href="#">Today</a>
-        <a class="btn btn-outline-secondary btn-sm" href="#">This Week</a>
-        <a class="btn btn-outline-secondary btn-sm" href="#">Under $50</a>
+        <a class="btn btn-outline-secondary btn-sm{% if not quick_filter %} active{% endif %}"
+           href="{{ url_for('main.index', genre=selected_genre if selected_genre else None, q=search_query if search_query else None) }}">
+          All
+        </a>
+        {% for value, label in quick_filters %}
+          <a class="btn btn-outline-secondary btn-sm{% if quick_filter == value %} active{% endif %}"
+             href="{{ url_for('main.index', quick=value, genre=selected_genre if selected_genre else None, q=search_query if search_query else None) }}">
+            {{ label }}
+          </a>
+        {% endfor %}
       </div>
     </div>
   </div>
@@ -118,10 +137,20 @@
   <main class="container py-4">
     <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mb-3 gap-2">
       <h3 class="mb-0">All Concerts</h3>
-      {% if search_query %}
+      {% if search_query or selected_genre or quick_filter_label %}
         <div class="text-muted small d-flex align-items-center gap-2">
-          <span><i class="bi bi-search"></i> Results for "<strong>{{ search_query }}</strong>"</span>
-          <a class="btn btn-link btn-sm text-decoration-none" href="{{ url_for('main.index') }}">Clear</a>
+          <div class="d-flex flex-wrap gap-2">
+            {% if search_query %}
+              <span><i class="bi bi-search"></i> Results for "<strong>{{ search_query }}</strong>"</span>
+            {% endif %}
+            {% if selected_genre %}
+              <span><i class="bi bi-disc"></i> Genre: <strong>{{ selected_genre }}</strong></span>
+            {% endif %}
+            {% if quick_filter_label %}
+              <span><i class="bi bi-lightning-charge"></i> Quick Filter: <strong>{{ quick_filter_label }}</strong></span>
+            {% endif %}
+          </div>
+          <a class="btn btn-link btn-sm text-decoration-none" href="{{ url_for('main.index') }}">Clear filters</a>
         </div>
       {% endif %}
     </div>
@@ -213,9 +242,9 @@
       <div class="row">
         <div class="col">
           <div class="alert alert-info" role="alert">
-            {% if search_query %}
-              <i class="bi bi-info-circle me-1"></i>No events match "<strong>{{ search_query }}</strong>". 
-              <a class="alert-link" href="{{ url_for('main.index') }}">Clear search</a> or adjust your filters.
+            {% if search_query or selected_genre or quick_filter_label %}
+              <i class="bi bi-info-circle me-1"></i>No events match{% if search_query %} "<strong>{{ search_query }}</strong>"{% endif %}{% if selected_genre %}{% if search_query %} and{% else %} {% endif %}the genre "<strong>{{ selected_genre }}</strong>"{% endif %}{% if quick_filter_label %}{% if search_query or selected_genre %} with{% else %} {% endif %}the quick filter "<strong>{{ quick_filter_label }}</strong>"{% endif %}.
+              <a class="alert-link" href="{{ url_for('main.index') }}">Clear filters</a> or adjust your filters.
             {% else %}
               <i class="bi bi-info-circle me-1"></i>No events found. Create one to get started.
             {% endif %}
