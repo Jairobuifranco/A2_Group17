@@ -28,8 +28,9 @@ class Event(db.Model):
     status = db.Column(db.String(40), nullable=False, default='Open')
     category = db.Column(db.String(60))
     image_url = db.Column(db.String(255))
-
-    # Add user id into event table as FK
+    # Add created_at column to show when events were created #
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    # Add user id into event table as FK #
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, default=1)
     user = db.relationship('User', backref='events')
 

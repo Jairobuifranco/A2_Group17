@@ -2,21 +2,41 @@ from flask import Blueprint, abort, render_template, url_for, flash, request, re
 from flask_login import login_required, current_user
 from datetime import datetime
 from .models import db, Event
+from flask_wtf import FlaskForm
 from .forms import EventForm
+import os
+from werkzeug.utils import secure_filename
 
 
-# Definitions for Blueprint
 main_bp = Blueprint('main', __name__)
+# Events Blueprint #
 events_bp = Blueprint('events', __name__)
 
+UPLOAD_FOLDER = 'static/img'
+# Define functions for file upload #
+def allowed_file(filename):
+    ALLOWED_EXTENSIONS = {'jpg', 'jepg', 'png', 'gif'}
+    return '.' in filename and \
+    filename.rsplit('.', 1)[1].lower in ALLOWED_EXTENSIONS
+
+# Define finction to save upload file #
+def save_uploaded_file(file):
+    if file and file.filename != '' and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        # Validate file upload path #
+        BASE_PATH = os.path.dirname(__file__)
+        upload_path = os.path.join(BASE_PATH, UPLOAD_FOLDER)
+        os.makedirs(upload_path, exist_ok=True)
+        file_path = os.path.join(upload_path, filename)
+        file.save(file_path)
+        return f'static/img/{filename}'
+    return None
 
 @main_bp.route('/')
 def index():
     events = db.session.scalars(db.select(Event).order_by(Event.start_time)).all()
     return render_template('index.html', events=events)
     
-
-
 @main_bp.route('/events/<int:event_id>')
 def event(event_id: int):
     event = db.session.get(Event, event_id)
@@ -36,8 +56,13 @@ def event(event_id: int):
 
     return render_template('event.html', event=event, event_image_url=resolved_image_url)
 
-# Routes for creating events
-# Event details: name, venue, description, date, start time, end time, ticket quantity, capacity, price, category, image
+# Bookings 
+@main_bp.route('/bookings')
+@login_required
+def bookings():
+    return render_template('bookings.html')
+
+# Routes for creating events #
 @events_bp.route('/create', methods=['GET', 'POST'])
 @login_required
 def create_event():
@@ -54,20 +79,18 @@ def create_event():
             start_datetime = datetime.combine(form.date.data, form.start_time.data)
             end_datetime = datetime.combine(form.date.data, form.end_time.data)
             
-            # Status determination
-            status = 'Open'
-
-            # The events completed in the past
-            if form.date.data < datetime.today().date():
-                status = 'Inactive'
-                print(f"DEBUG: Status: {status}")
-                # Sold out
-
-            # Image url handling
-            image_url_to_save = form.image_url.data if form.image_url.data  else url_for('static', filename='img/hero1.jpg')
-            print(f"DEBUG: Image URL: {image_url_to_save}")
+            # Image handling #
+            image_path = None
+            if form.image_file.data:
+                image_path = save_uploaded_file(form.image_file.data)
+            if image_path:
+                image_url_to_save = image_path
+            elif form.image_url.data:
+                image_url_to_save = form.image_url.data
+            else:
+                image_url_to_save = url_for('static', filename = 'img/hero1.jpg')
         
-            # Details needed to create a new event
+            # Details needed to create a new event #
             new_event = Event (
                 title=form.name.data,
                 venue=form.venue.data,
@@ -75,29 +98,39 @@ def create_event():
                 start_time=start_datetime,
                 end_time=end_datetime,
                 price=float(form.price.data),
-                ticket_quantiy=form.ticket_quantity.data,
+                ticket_quantity=form.ticket_quantity.data,
                 capacity=form.capacity.data,
                 category=form.category.data,
                 status='Open', # default status
                 image_url=image_url_to_save,
                 user_id=current_user.id,
             )
-            print(f"DEBUG: Event created: {new_event.title}")
+            print(f"DEBUG: Event created, about to redirect")
             # Save events to database
             db.session.add(new_event)
             db.session.commit()
             print(f"DEBUG: Event saved successfully")
             flash('Event created successfully.', 'success')
             # New events will appear on Home page, Event Details page
-            return redirect(url_for('main.index', event_id=new_event.id))
+            return redirect(url_for('main.index'))
         
         except Exception as e:
          db.session.rollback()
          flash(f'Error event creating: {str(e)}')
   
     return render_template('create.html', form=form, action='Create Event')
+
+# Routes for My Events #
+@events_bp.route('/my-events')
+@login_required
+def my_events():
+    # Sort created events by date #
+    events = Event.query.filter_by(user_id=current_user.id)\
+                        .order_by(Event.start_time.desc())\
+                        .all()
+    return render_template('MyEvents.html', events=events, now=datetime.now())
         
-#  Routes for updating events
+#  Routes for updating events #
 @events_bp.route('/update/<int:event_id>', methods=['GET', 'POST'])
 @login_required
 def update_event(event_id):
@@ -110,9 +143,9 @@ def update_event(event_id):
         flash('You are not authorized to update this event.', 'warning')
         return redirect(url_for('main.index'))
     
-    form = EventForm(obj=event)
+    form = EventForm()
 
-    # Pre-populate the form with existing data for users to change quickly
+    # Pre-populate the form with existing data #
     if request.method == 'GET':
         form.name.data = event.title
         form.venue.data = event.venue
@@ -137,19 +170,12 @@ def update_event(event_id):
             event.start_time=start_datetime
             event.end_time=end_datetime
             event.price=float(form.price.data)
-            event.ticket_quantiy=form.ticket_quantity.data
+            event.ticket_quantity=form.ticket_quantity.data
             event.capacity=form.capacity.data
             event.category=form.category.data
             event.image_url=form.image_url.data if form.image_url.data else event.image_url
             
-            # Events happened in the past
-            if form.date.data < datetime.today().date():
-                event.status = 'Inactive'
-            elif event.status == 'Cancelled':
-                event.status = 'Cancelled'
-            else:
-                event.status = 'Open'
-
+          
             db.session.commit()
             flash('Event updated successfully.', 'success')
             return redirect(url_for('main.index'))
@@ -157,7 +183,7 @@ def update_event(event_id):
             db.session.rollback()
             flash(f'Error: {str(e)}')
 
-    return render_template('create.html', form=form, event=event, action='Update Event')
+    return render_template('create.html', form=form, event=event, event_id=event.id, action='Update Event')
 
 # Route for user to cancel events
 @events_bp.route('/cancel/<int:event_id>', methods=['POST'])
@@ -177,8 +203,8 @@ def cancel_event(event_id):
         flash('Event has been cancelled.', 'success')
     except Exception as e:
         db.session.rollback()
-        flash('Event can not be cancelled', 'error')
-    return redirect(url_for('main.index', event_id=event.id))
+        flash('Event can not be cancelled: {str(e)}', 'error')
+    return redirect(url_for('main.index'))
 
         
 

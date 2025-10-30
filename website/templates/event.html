@@ -17,14 +17,13 @@
       <div class="collapse navbar-collapse" id="navMain">
         <ul class="navbar-nav me-auto">
           <li class="nav-item"><a class="nav-link" href="{{ url_for('main.index') }}">Home</a></li>
-          <li class="nav-item"><a class="nav-link" href="create.html">Create Event</a></li>
-          <li class="nav-item"><a class="nav-link" href="bookings.html">Bookings</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('events.create_event') }}">Create Event</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('main.bookings') }}">Bookings</a></li>
         </ul>
-        <!-- Auth buttons  -->
-        <div class="ms-3 d-flex gap-2">
-          <a class="btn btn-outline-secondary btn-sm" href="#">Log in</a>
-          <a class="btn btn-primary btn-sm" href="#">Sign up</a>
-        </div>
+         <!-- Logged-in indicator !-->
+         {% if current_user.is_authenticated %}
+        <span class="badge text-bg-success">Logged in as {{ current_user.name }}</span>
+        {% endif %}
       </div>
     </div>
   </nav>

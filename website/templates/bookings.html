@@ -16,12 +16,15 @@
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain"><span class="navbar-toggler-icon"></span></button>
       <div class="collapse navbar-collapse" id="navMain">
         <ul class="navbar-nav me-auto">
-          <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
-          <li class="nav-item"><a class="nav-link" href="create.html">Create Event</a></li>
-          <li class="nav-item"><a class="nav-link active" href="bookings.html" aria-current="page">Bookings</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('main.index') }}">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('events.create_event') }}">Create Event</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('events.my_events') }}">My Events</a></li>
+          <li class="nav-item"><a class="nav-link active" href="{{ url_for('main.bookings') }}" aria-current="page">Bookings</a></li>
         </ul>
-        <!-- Logged-in indicator -->
-        <span class="badge text-bg-success">Logged in</span>
+        <!-- Logged-in indicator !-->
+         {% if current_user.is_authenticated %}
+        <span class="badge text-bg-success">Logged in as {{ current_user.name }}</span>
+        {% endif %}
       </div>
     </div>
   </nav>

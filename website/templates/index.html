@@ -22,7 +22,7 @@
         <ul class="navbar-nav me-auto">
           <li class="nav-item"><a class="nav-link active" href="{{ url_for('main.index') }}" aria-current="page">Home</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for('events.create_event') }}">Create</a></li>
-          <li class="nav-item"><a class="nav-link" href="bookings.html">Bookings</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('main.bookings') }}">Bookings</a></li>
           <!-- Genres dropdown -->
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Genres</a>
@@ -45,12 +45,14 @@
 
         <!-- Auth buttons -->
         <div class="ms-3 d-flex gap-2">
-          
-          <a class="btn btn-outline-secondary btn-sm" href="#">Log in</a>
-          <a class="btn btn-primary btn-sm" href="#">Sign up</a>
+         {% if current_user.is_authenticated %}
+         <span class="badge text-bg-success me-2">Signed in as {{ current_user.name }}</span>
+         <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('auth.logout') }}">Log out</a>
+         {% else %}
+         <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('auth.login') }}">Log in</a>
+          <a class="btn btn-primary btn-sm" href="{{ url_for('auth.register') }}">Sign up</a>
+         {% endif %}
         </div>
-      </div>
-    </div>
   </nav>
 
   <!-- Carousel -->
