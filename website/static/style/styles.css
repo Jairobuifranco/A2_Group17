@@ -20,7 +20,11 @@ body { background: #f8f9fa; }
 .badge-price { font-size: 0.9rem; }
 
 /* Sticky toolbar */
-.sticky-toolbar { position: sticky; top: 0; z-index: 1020; }
+.sticky-toolbar { position: sticky; top: 0; z-index: 900; }
+
+/* Ensure navbar and dropdowns layer above sticky toolbar */
+.navbar { position: relative; z-index: 1050; }
+.navbar .dropdown-menu { position: absolute; z-index: 1060; }
 
 /* Event page */
 .event-hero { max-height: 460px; object-fit: cover; }

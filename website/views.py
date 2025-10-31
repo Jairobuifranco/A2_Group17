@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+from decimal import Decimal
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -54,6 +55,21 @@ def recalc_event_status(event_id: int):
         UPDATE event SET status = :new_status WHERE id = :eid
     """), {"new_status": new_status, "eid": event_id})
     db.session.commit()
+GENRE_OPTIONS = [
+    "Electronic",
+    "Rock",
+    "Jazz",
+    "Classical",
+    "Latin",
+    "Hip Hop",
+    "Other",
+]
+
+QUICK_FILTER_OPTIONS = [
+    ("today", "Today"),
+    ("week", "This Week"),
+    ("under50", "Under $50"),
+]
 
 
 def _resolve_event_datetimes(form: EventForm):
@@ -78,6 +94,8 @@ def _resolve_event_datetimes(form: EventForm):
 @main_bp.route('/')
 def index():
     search_query = request.args.get('q', '').strip()
+    genre_filter = request.args.get('genre', '').strip()
+    quick_filter = request.args.get('quick', '').strip().lower()
     statement = db.select(Event).order_by(Event.start_time)
     if search_query:
         pattern = f"%{search_query}%"
@@ -89,6 +107,28 @@ def index():
                 Event.description.ilike(pattern),
             )
         )
+    if genre_filter:
+        statement = statement.where(Event.category.ilike(genre_filter))
+    now = datetime.utcnow()
+    if quick_filter == 'today':
+        start_of_day = datetime.combine(now.date(), datetime.min.time())
+        end_of_day = start_of_day + timedelta(days=1)
+        statement = statement.where(
+            Event.start_time >= start_of_day,
+            Event.start_time < end_of_day,
+        )
+    elif quick_filter == 'week':
+        end_of_range = now + timedelta(days=7)
+        statement = statement.where(
+            Event.start_time >= now,
+            Event.start_time < end_of_range,
+        )
+    elif quick_filter == 'under50':
+        statement = statement.where(Event.price <= Decimal('50'))
+    quick_filter_label = next(
+        (label for value, label in QUICK_FILTER_OPTIONS if value == quick_filter),
+        None,
+    )
     events = db.session.scalars(
         statement
     ).all()
@@ -114,6 +154,11 @@ def index():
         past_events=past_events,
         featured_events=featured_events,
         search_query=search_query,
+        genres=GENRE_OPTIONS,
+        selected_genre=genre_filter,
+        quick_filters=QUICK_FILTER_OPTIONS,
+        quick_filter=quick_filter,
+        quick_filter_label=quick_filter_label,
     )
 
 
