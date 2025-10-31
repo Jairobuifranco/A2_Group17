@@ -8,7 +8,7 @@ from decimal import Decimal
 from werkzeug.security import generate_password_hash
 
 from website import create_app, db
-from website.models import Comment, Event, User
+from website.models import Comment, Event, Order, User
 
 
 def seed() -> None:
@@ -131,9 +131,21 @@ def seed() -> None:
         ]
 
         db.session.add_all(comments)
+
+        orders: list[Order] = [
+            Order(user=users["alex"], event=events[0], quantity=2),
+            Order(user=users["alex"], event=events[3], quantity=1),
+            Order(user=users["sam"], event=events[1], quantity=4),
+            Order(user=users["maria"], event=events[2], quantity=2),
+        ]
+
+        db.session.add_all(orders)
         db.session.commit()
 
-        print(f"Inserted {len(events)} events, {len(users)} users, and {len(comments)} comments.")
+        print(
+            f"Inserted {len(events)} events, {len(users)} users, {len(comments)} comments, "
+            f"and {len(orders)} orders."
+        )
 
 
 if __name__ == "__main__":

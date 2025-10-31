@@ -48,12 +48,22 @@ class Event(db.Model):
         "Order", back_populates="event", cascade="all, delete-orphan"
     )
 
-    def __repr__(self) -> str:
-        return f"<Event {self.id} {self.title!r}>"
+    @property
+    def is_expired(self) -> bool:
+        """Return True when the event end (or start) time is in the past."""
+        reference = self.end_time or self.start_time
+        if reference is None:
+            return False
+        return reference < datetime.utcnow()
 
+    @property
+    def display_status(self) -> str:
+        """Status label with automatic expiry handling."""
+        base_status = (self.status or '').strip()
+        if self.is_expired and base_status.lower() not in {'cancelled', 'expired'}:
+            return 'Expired'
+        return base_status or 'Open'
 
-
-# Comments
 
 class Comment(db.Model):
     __tablename__ = "comment"

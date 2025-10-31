@@ -12,7 +12,8 @@
 </head>
 <body>
 
-  <!-- top navbar with site name, nav links, and fake login buttons -->
+
+  <!-- top navbar with site name, nav links, and simple auth placeholders -->
   <nav class="navbar navbar-expand-lg bg-white border-bottom">
     <div class="container">
       <a class="navbar-brand fw-bold" href="{{ url_for('main.index') }}">
@@ -30,7 +31,6 @@
           <li class="nav-item"><a class="nav-link" href="{{ url_for('main.bookings') }}">Bookings</a></li>
         </ul>
 
-        <!-- these buttons are just UI placeholders, not real auth -->
         <div class="d-none d-md-flex gap-2">
           <a class="btn btn-outline-secondary btn-sm" href="#">Log in</a>
           <a class="btn btn-primary btn-sm" href="#">Sign up</a>
@@ -41,7 +41,7 @@
 
   <main class="container py-4">
 
-    <!-- flash area: shows messages like "only 3 tickets left" or "booking created" -->
+    <!-- flash messages (capacity warnings etc.) -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="mb-3">
@@ -55,10 +55,8 @@
     {% endwith %}
 
     <div class="row g-4">
-      <!-- left column: hero image and about/description -->
+      <!-- left: hero image + about -->
       <div class="col-lg-8">
-
-        <!-- main event image (fallback is handled in the backend if none set) -->
         <div class="ratio ratio-16x9 mb-3">
           <img
             src="{{ event_image_url }}"
@@ -68,7 +66,6 @@
           />
         </div>
 
-        <!-- about this event / description text -->
         <div class="card">
           <div class="card-header fw-semibold">About this event</div>
           <div class="card-body">
@@ -81,14 +78,12 @@
         </div>
       </div>
 
-      <!-- right column: event details, booking box, comments -->
+      <!-- right: details + booking + comments -->
       <div class="col-lg-4">
-
-        <!-- event info card (title, status, date, time, venue, price, booking form / closed state) -->
         <div class="card">
           <div class="card-body">
 
-            <!-- event name and current status badge -->
+            <!-- title + status badge -->
             <div class="d-flex align-items-start justify-content-between">
               <h1 class="h4 mb-2">{{ event.title }}</h1>
               {% if event.status %}
@@ -98,7 +93,7 @@
               {% endif %}
             </div>
 
-            <!-- basic event details like date, time, venue -->
+            <!-- date / time / venue -->
             <ul class="list-unstyled small mb-3">
               {% if event.start_time %}
                 <li class="mb-1">
@@ -123,44 +118,29 @@
               {% endif %}
             </ul>
 
-            <!-- price per ticket (only if we actually have a price) -->
+            <!-- price -->
             {% if event.price is not none %}
               <span class="badge text-bg-light border mb-3 d-inline-block">
-                <i class="bi bi-currency-dollar"></i>
-                {{ '%.2f'|format(event.price) }} per ticket
+                <i class="bi bi-currency-dollar"></i> {{ '%.2f'|format(event.price) }} per ticket
               </span>
             {% endif %}
 
-            <!-- booking area: if event is not open, show locked message -->
+            <!-- booking: closed vs open -->
             {% if event.status and event.status|lower != 'open' %}
               <div class="alert alert-warning mb-3">
                 Sorry, this event is not accepting bookings.
               </div>
-
               <button class="btn btn-secondary w-100" disabled>
                 <i class="bi bi-lock me-1"></i> Booking Closed
               </button>
-
               <div class="form-text mt-2">Status: {{ event.status }}</div>
-
             {% else %}
-              <!-- event is open, so show the booking form -->
               <form method="post" action="{{ url_for('main.create_order', event_id=event.id) }}">
                 <div class="row g-2 mb-3">
-                  <!-- how many tickets the user wants -->
                   <div class="col-6">
                     <label class="form-label">Tickets</label>
-                    <input
-                      class="form-control"
-                      type="number"
-                      name="qty"
-                      min="1"
-                      value="1"
-                      required
-                    >
+                    <input class="form-control" type="number" name="qty" min="1" value="1" required>
                   </div>
-
-                  <!-- ticket type picker (e.g. General or VIP) -->
                   <div class="col-6">
                     <label class="form-label">Type</label>
                     <select class="form-select" name="ticket_type">
@@ -169,24 +149,17 @@
                     </select>
                   </div>
                 </div>
-
-                <!-- we don't have real login yet so user_id is hard-coded to 1 -->
                 <input type="hidden" name="user_id" value="1">
-
-                <!-- button that actually books the tickets -->
                 <button class="btn btn-primary w-100">
                   <i class="bi bi-ticket-perforated me-1"></i> Book Now
                 </button>
-
-                <div class="form-text mt-2">
-                  This takes you to Booking History.
-                </div>
+                <div class="form-text mt-2">This takes you to Booking History.</div>
               </form>
             {% endif %}
           </div>
         </div>
 
-        <!-- comments card: list of comments and a box to add a new one -->
+        <!-- comments -->
         <div class="card mt-3">
           <div class="card-body">
             <h5 class="card-title mb-3">Comments</h5>
@@ -196,34 +169,20 @@
                 {% for c in comments %}
                   <div class="list-group-item">
                     <div class="d-flex justify-content-between align-items-center mb-1">
-                      <!-- username placeholder (we're not doing accounts yet) -->
                       <strong>{{ c.user_name or 'User' }}</strong>
-
-                      <!-- comment timestamp, shown in Brisbane time using the filter -->
                       <small class="text-muted">{{ c.created_at | bris }}</small>
                     </div>
-
-                    <!-- comment text body -->
                     <p class="mb-0">{{ c.body }}</p>
                   </div>
                 {% endfor %}
               </div>
             {% else %}
-              <div class="alert alert-light border mb-3">
-                No comments yet.
-              </div>
+              <div class="alert alert-light border mb-3">No comments yet.</div>
             {% endif %}
 
-            <!-- form for adding a new comment -->
             <form method="post" action="{{ url_for('main.add_comment', event_id=event.id) }}">
               <div class="input-group">
-                <input
-                  type="text"
-                  class="form-control"
-                  name="body"
-                  placeholder="Write a comment…"
-                  required
-                >
+                <input type="text" class="form-control" name="body" placeholder="Write a comment…" required>
                 {% if csrf_token is defined %}{{ csrf_token() }}{% endif %}
                 <button class="btn btn-outline-secondary">Post Comment</button>
               </div>
@@ -231,11 +190,10 @@
           </div>
         </div>
 
-      </div> <!-- end right column -->
-    </div> <!-- end row -->
+      </div>
+    </div>
   </main>
 
-  <!-- simple footer -->
   <footer class="py-4 bg-white border-top">
     <div class="container d-flex justify-content-between align-items-center">
       <span class="text-muted small">&copy; <span>2025</span> LocalConcerts</span>
