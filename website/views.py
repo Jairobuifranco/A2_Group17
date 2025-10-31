@@ -185,6 +185,7 @@ def create_event():
             status=form.status.data,
             category=form.category.data,
             image_url=form.image_url.data,
+            user_id=current_user.id,
         )
 
         db.session.add(event)
@@ -202,6 +203,10 @@ def edit_event(event_id: int):
     event = db.session.get(Event, event_id)
     if event is None:
         abort(404)
+
+    if event.user_id != current_user.id:
+        flash('You are not authorized to edit this event.')
+        return redirect(url_for('main.event', event_id=event.id))
 
     form = EventForm(obj=event)
     form.submit.label.text = 'Update Event'
