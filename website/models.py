@@ -13,6 +13,7 @@ class User(db.Model, UserMixin):
 
     orders = db.relationship('Order', back_populates='user', cascade='all, delete-orphan')
     comments = db.relationship('Comment', back_populates='user', cascade='all, delete-orphan')
+    events = db.relationship('Event', back_populates='creator', cascade='all, delete-orphan')
 
 
 class Event(db.Model):
@@ -29,6 +30,9 @@ class Event(db.Model):
 
     comments = db.relationship('Comment', back_populates='event', cascade='all, delete-orphan')
     orders = db.relationship('Order', back_populates='event', cascade='all, delete-orphan')
+
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    creator = db.relationship('User', back_populates='events')
 
     @property
     def is_expired(self) -> bool:
