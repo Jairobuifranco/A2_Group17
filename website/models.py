@@ -1,10 +1,8 @@
 from datetime import datetime, timezone
 from flask_login import UserMixin
-from . import db  # the SQLAlchemy() you init in website/__init__.py
+from . import db  
 
-
-# -------------------- Users --------------------
-
+# User
 class User(db.Model, UserMixin):
     __tablename__ = "user"
     id = db.Column(db.Integer, primary_key=True)
@@ -15,16 +13,12 @@ class User(db.Model, UserMixin):
     orders = db.relationship('Order', back_populates='user', cascade='all, delete-orphan')
     comments = db.relationship('Comment', back_populates='user', cascade='all, delete-orphan')
     events = db.relationship('Event', back_populates='creator', cascade='all, delete-orphan')
-    # relationships
-    orders = db.relationship("Order", back_populates="user", cascade="all, delete-orphan")
-    comments = db.relationship("Comment", back_populates="user", cascade="all, delete-orphan")
-
+    
     def __repr__(self) -> str:
         return f"<User {self.id} {self.email}>"
 
 
-# -------------------- Events --------------------
-
+# Event
 class Event(db.Model):
     __tablename__ = "event"
     id = db.Column(db.Integer, primary_key=True)
@@ -43,22 +37,11 @@ class Event(db.Model):
 
     # Add user id into event table as FK #
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, default=1)
-    user = db.relationship('User', backref='events')
+    creator = db.relationship('User', back_populates='events')
 
     comments = db.relationship('Comment', back_populates='event', cascade='all, delete-orphan')
     orders = db.relationship('Order', back_populates='event', cascade='all, delete-orphan')
-    venue = db.Column(db.String(150))
-    description = db.Column(db.Text)
-    start_time = db.Column(db.DateTime)
-    end_time = db.Column(db.DateTime)
-    price = db.Column(db.Numeric(10, 2), nullable=False, default=0)
-    status = db.Column(db.String(40), nullable=False, default="Open")
-    category = db.Column(db.String(60))
-    image_url = db.Column(db.String(255))
-
-    comments = db.relationship("Comment", back_populates="event", cascade="all, delete-orphan")
-    orders   = db.relationship("Order",   back_populates="event", cascade="all, delete-orphan")
-
+   
     @property
     def is_expired(self) -> bool:
         """Return True when the event end (or start) time is in the past."""
@@ -76,8 +59,7 @@ class Event(db.Model):
         return base_status or 'Open'
 
 
-# -------------------- Comments --------------------
-
+# Comments
 class Comment(db.Model):
     __tablename__ = "comment"
     id = db.Column(db.Integer, primary_key=True)
@@ -94,8 +76,7 @@ class Comment(db.Model):
         return f"<Comment {self.id} user={self.user_id} event={self.event_id}>"
 
 
-# -------------------- Orders (bookings) --------------------
-
+# Orders (bookings) 
 class Order(db.Model):
     __tablename__ = "order"
     id = db.Column(db.Integer, primary_key=True)
@@ -118,8 +99,7 @@ class Order(db.Model):
         return f"<Order {self.id} user={self.user_id} event={self.event_id} qty={self.quantity}>"
 
 
-# -------------------- Booking audit (optional) --------------------
-
+#  Booking 
 class BookingEvent(db.Model):
     __tablename__ = "booking_events"
     # created PRIMARY KEY event_id; keeping that mapping:

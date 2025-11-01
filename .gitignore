@@ -21,3 +21,4 @@ __pycache__/
 
 # Logs
 *.log
+reset_db.py
