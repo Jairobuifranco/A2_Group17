@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Local Concerts — My Events</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+   <!-- Resolved css link !-->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style/styles.css') }}"/>
+</head>
+<body>
+  <!--Navbar-->
+  <nav class="navbar navbar-expand-lg bg-white border-bottom">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="{{ url_for('main.index') }}"><i class="bi bi-music-note-beamed me-1"></i>Local<span>Concerts</span></a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain"><span class="navbar-toggler-icon"></span></button>
+      <div class="collapse navbar-collapse" id="navMain">
+        <ul class="navbar-nav me-auto">
+          <!-- Updated nav-link !-->
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('main.index') }}">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('events.create_event') }}">Create Event</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('events.my_events') }}">My Events</a></li>
+         <li class="nav-item"><a class="nav-link active" href="{{ url_for('main.bookings') }}" aria-current="page">Bookings</a></li>
+        </ul>
+        <!-- Logged-in indicator !-->
+         {% if current_user.is_authenticated %}
+        <span class="badge text-bg-success">Signed in as {{ current_user.name }}</span>
+        <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-secondary btn-sm ms-2">Logout</a>
+        {% else %}
+        <span class="badge text-bg-warning">Not Signed in</span>
+        {% endif %}
+      </div>
+    </div>
+  </nav>
+
+
+  <main class="container py-4">
+     {% with messages = get_flashed_messages(with_categories=True) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  {% set alert_class = category if category in ['primary','secondary','success','danger','warning','info','light','dark'] else 'info' %}
+                  <div class="alert alert-{{ alert_class }} mb-4" role="alert">
+                    {{ message }}
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+    <!-- My events !-->
+    <h3 class="mb-3">My Events</h3>
+      {% if events %}
+      <div class="row g-4 row-cols-1 row-cols-md-2 row-cols-lg-3">
+        {% for event in events %}
+        <div class="col">
+          <div class="card h-100 shadow-sm {% if event.status == 'Cancelled' %}border-danger
+          {% elif event.status == 'Inactive' %}border-secondary{% endif %}">
+          {% if event.image_url %}
+             {% if event.image_url.startswith('http') %}
+                <img src="{{ event.image_url }}" class="card-img-top" alt="{{ event.title }}" style="height: 150px; object-fit:cover">
+          {% else %}
+             <img src="{{ url_for('static', filename=event.image_url.replace('static/', '')) }}" class="card-img-top" alt="{{ event.title }}" style="height: 150px; object-fit:cover">
+          {% endif %}
+        {% else %}
+          <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 150px;">
+            <i class="bi bi-calendar-event text-muted" style="font-size: 2rem;"></i>
+          </div>
+           {% endif %}
+
+           <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+             <h5 class="card-title">{{ event.title }}</h5>
+             {% if event.status == 'Open' %}
+                <span class="badge bg-success">{{ event.status }}</span>
+              {% elif event.status == 'Cancelled' %}
+                 <span class="badge bg-danger">{{ event.status }}</span>
+              {% else %}
+                  <span class="badge bg-secondary">{{ event.status }}</span>
+              {% endif %}
+          </div>
+
+          <p class="card-text mb-1">
+            <strong>Event Date:</strong> {{ event.start_time.strftime('%Y-%m-%d') }}</p>
+          <p class="card-text">
+            <strong>Created At:</strong>
+            {% if event.created_at %}
+               {{ event.created_at.strftime('%Y-%m-%d') }}
+             {% else %}
+               {{ event.start_time.strftime('%Y-%m-%d') }}
+             {% endif %}
+          </p>
+        </div>
+        <!-- Update button !-->
+          <div class="card-footer bg-transparent">
+            <div class="d-flex justify-content-between">
+              {% if event.status == 'Open' and event.start_time > now %}
+              <a href="{{ url_for('events.update_event', event_id=event.id) }}"
+              class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-pencil"></i> Update </a>
+            {% else %}
+            <button class="btn btn-outline-secondary btn-sm" disabled>
+              <i class="bi bi-pencil"></i> Update </button>
+              {% endif %}
+
+              <!-- Cancel button !-->
+              {% if event.status == 'Open' and event.start_time > now %}
+              <form action="{{ url_for('events.cancel_event', event_id=event.id) }}" method="post" class="d-inline">
+                <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to cancel {{ event.title }}?')">
+                <i class="bi bi-x-circle"></i> Cancel </button>
+              </form>
+              {% else %}
+               <button class="btn btn-outline-secondary btn-sm" disabled>
+              <i class="bi bi-x-circle"></i> Cancel </button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-5">
+        <i class="bi bi-calendar-x text-muted" style="font-size: 4rem;"></i>
+        <h4 class="mt-3">You haven't created any events yet</h4>
+        <a href="{{ url_for('events.create_event') }}" class="btn btn-primary">Create Your First Event with LocalConcerts</a>
+      </div>
+      {% endif %}
+  </main>
+
+  <!--Footer-->
+  <footer class="py-4 bg-white border-top">
+    <div class="container d-flex justify-content-between align-items-center">
+      <span class="text-muted small">&copy; <span>2025</span> LocalConcerts</span>
+      <a class="small text-decoration-none" href="#">Terms & Privacy</a>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
