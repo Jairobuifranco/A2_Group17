@@ -1,46 +1,131 @@
-from flask import Blueprint, abort, render_template, url_for, flash, request, redirect
-from flask_login import login_required, current_user
-from datetime import datetime
-from .models import db, Event
-from flask_wtf import FlaskForm
-from .forms import EventForm
-import os
-from werkzeug.utils import secure_filename
+from datetime import datetime, timedelta
+from decimal import Decimal
+
+from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
+from sqlalchemy.orm import selectinload
+from sqlalchemy import or_
+
+from . import db
+from .models import Event, Order
+from .forms import EventForm, BookingForm
 
 
 main_bp = Blueprint('main', __name__)
-# Events Blueprint #
-events_bp = Blueprint('events', __name__)
 
-UPLOAD_FOLDER = 'static/img'
-# Define functions for file upload #
-def allowed_file(filename):
-    ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif'}
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+GENRE_OPTIONS = [
+    "Electronic",
+    "Rock",
+    "Jazz",
+    "Classical",
+    "Latin",
+    "Hip Hop",
+    "Other",
+]
 
-# Define finction to save upload file #
-def save_uploaded_file(file):
-    if file and file.filename != '' and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        # Validate file upload path #
-        BASE_PATH = os.path.dirname(__file__)
-        upload_path = os.path.join(BASE_PATH, UPLOAD_FOLDER)
-        os.makedirs(upload_path, exist_ok=True)
-        file_path = os.path.join(upload_path, filename)
-        file.save(file_path)
-        return f'img/{filename}'
-    return None
+QUICK_FILTER_OPTIONS = [
+    ("today", "Today"),
+    ("week", "This Week"),
+    ("under50", "Under $50"),
+]
+
+
+def _resolve_event_datetimes(form: EventForm):
+    """Combine date/time fields and ensure end after start."""
+    start_date = form.start_date.data
+    start_time_value = form.start_time.data
+    end_time_value = form.end_time.data
+
+    if not all([start_date, start_time_value, end_time_value]):
+        return None, None, True
+
+    start_datetime = datetime.combine(start_date, start_time_value)
+    end_datetime = datetime.combine(start_date, end_time_value)
+
+    if end_datetime <= start_datetime:
+        form.end_time.errors.append('End time must be after start time.')
+        return None, None, False
+
+    return start_datetime, end_datetime, True
+
 
 @main_bp.route('/')
 def index():
-    events = db.session.scalars(db.select(Event).order_by(Event.start_time)).all()
-    return render_template('index.html', events=events)
-    
+    search_query = request.args.get('q', '').strip()
+    genre_filter = request.args.get('genre', '').strip()
+    quick_filter = request.args.get('quick', '').strip().lower()
+    statement = db.select(Event).order_by(Event.start_time)
+    if search_query:
+        pattern = f"%{search_query}%"
+        statement = statement.where(
+            or_(
+                Event.title.ilike(pattern),
+                Event.venue.ilike(pattern),
+                Event.category.ilike(pattern),
+                Event.description.ilike(pattern),
+            )
+        )
+    if genre_filter:
+        statement = statement.where(Event.category.ilike(genre_filter))
+    now = datetime.utcnow()
+    if quick_filter == 'today':
+        start_of_day = datetime.combine(now.date(), datetime.min.time())
+        end_of_day = start_of_day + timedelta(days=1)
+        statement = statement.where(
+            Event.start_time >= start_of_day,
+            Event.start_time < end_of_day,
+        )
+    elif quick_filter == 'week':
+        end_of_range = now + timedelta(days=7)
+        statement = statement.where(
+            Event.start_time >= now,
+            Event.start_time < end_of_range,
+        )
+    elif quick_filter == 'under50':
+        statement = statement.where(Event.price <= Decimal('50'))
+    quick_filter_label = next(
+        (label for value, label in QUICK_FILTER_OPTIONS if value == quick_filter),
+        None,
+    )
+    events = db.session.scalars(
+        statement
+    ).all()
+    upcoming_events = [
+        event for event in events
+        if not event.is_expired
+    ]
+    upcoming_events.sort(
+        key=lambda event: (
+            0 if 'open' in (event.display_status or '').lower() else 1,
+            event.start_time or datetime.max,
+        )
+    )
+    past_events = [
+        event for event in events
+        if event.is_expired
+    ]
+    featured_events = upcoming_events[:2] if upcoming_events else events[:2]
+    return render_template(
+        'index.html',
+        events=events,
+        upcoming_events=upcoming_events,
+        past_events=past_events,
+        featured_events=featured_events,
+        search_query=search_query,
+        genres=GENRE_OPTIONS,
+        selected_genre=genre_filter,
+        quick_filters=QUICK_FILTER_OPTIONS,
+        quick_filter=quick_filter,
+        quick_filter_label=quick_filter_label,
+    )
+
+
 @main_bp.route('/events/<int:event_id>')
 def event(event_id: int):
     event = db.session.get(Event, event_id)
     if event is None:
         abort(404)
+    booking_form = BookingForm()
     image_url = event.image_url
     if image_url:
         if image_url.startswith(('http://', 'https://')):
@@ -53,164 +138,137 @@ def event(event_id: int):
     else:
         resolved_image_url = url_for('static', filename='img/hero1.jpg')
 
-    return render_template('event.html', event=event, event_image_url=resolved_image_url)
+    return render_template('event.html', event=event, event_image_url=resolved_image_url, booking_form=booking_form)
 
-# Bookings 
+
 @main_bp.route('/bookings')
 @login_required
 def bookings():
-    return render_template('bookings.html')
+    orders = db.session.scalars(
+        db.select(Order)
+        .where(Order.user_id == current_user.id)
+        .options(selectinload(Order.event))
+        .order_by(Order.created_at.desc())
+    ).all()
 
-# Routes for creating events #
-@events_bp.route('/create', methods=['GET', 'POST'])
+    return render_template('bookings.html', orders=orders)
+
+
+@main_bp.route('/events/create', methods=['GET', 'POST'])
 @login_required
 def create_event():
     form = EventForm()
+    form.submit.label.text = 'Create Event'
+    template_context = {
+        'form': form,
+        'form_action': url_for('main.create_event'),
+        'page_title': 'Create Event',
+        'page_heading': 'Create a New Event',
+        'page_subheading': 'Provide the event details below and publish instantly.',
+        'back_url': url_for('main.index'),
+        'back_label': 'Back to Events',
+        'active_nav': 'create',
+        'is_edit': False,
+    }
 
     if form.validate_on_submit():
-        
-        # Combine date and time into datetime 
-        try:
-            start_datetime = datetime.combine(form.date.data, form.start_time.data)
-            end_datetime = datetime.combine(form.date.data, form.end_time.data)
-            
-            # Image handling rules #
-            image_path = None
-            if form.image_file.data:
-                image_path = save_uploaded_file(form.image_file.data)
-            if image_path:
-                image_url_to_save = image_path
-            elif form.image_url.data:
-                image_url_to_save = form.image_url.data
-            else:
-                image_url_to_save = url_for('static', filename = 'img/hero1.jpg')
-        
-            # Basic fields to create a new event #
-            new_event = Event (
-                title=form.name.data,
-                venue=form.venue.data,
-                description=form.description.data,
-                start_time=start_datetime,
-                end_time=end_datetime,
-                price=float(form.price.data),
-                ticket_quantity=form.ticket_quantity.data,
-                capacity=form.capacity.data,
-                category=form.category.data,
-                status='Open', # default status
-                image_url=image_url_to_save,
-                user_id=current_user.id,
-            )
-            
-            # Save events to database
-            db.session.add(new_event)
-            db.session.commit()
+        start_datetime, end_datetime, is_valid = _resolve_event_datetimes(form)
+        if not is_valid:
+            return render_template('create.html', **template_context)
+        event = Event(
+            title=form.title.data,
+            venue=form.venue.data,
+            description=form.description.data,
+            start_time=start_datetime,
+            end_time=end_datetime,
+            price=form.price.data,
+            status=form.status.data,
+            category=form.category.data,
+            image_url=form.image_url.data,
+        )
 
-            flash('Event created successfully.', 'success')
-            # New events will appear on Home page, Event Details page
-            return redirect(url_for('main.index'))
-        
-        except Exception as e:
-         db.session.rollback()
-         flash(f'Errors occured in creating events: {str(e)}', 'error')
-  
-    return render_template('create.html', form=form, action='Create Event')
-
-# Routes for My Events #
-@events_bp.route('/my-events')
-@login_required
-def my_events():
-    # Created events ordered by the latest date to the oldest #
-    events = Event.query.filter_by(user_id=current_user.id)\
-                        .order_by(Event.start_time.desc())\
-                        .all()
-    return render_template('MyEvents.html', events=events, now=datetime.now())
-        
-# Routes for updating events #
-@events_bp.route('/update/<int:event_id>', methods=['GET', 'POST'])
-@login_required
-def update_event(event_id):
-    event = db.session.get(Event, event_id)
-    if event is None:
-        abort(404)
-        
-    # Check user is authorized or not
-    if event.user_id != current_user.id:
-        flash('You are not authorized to update this event.', 'warning')
-        return redirect(url_for('main.index'))
-    
-    form = EventForm()
-
-    # Pre-populate the form with existing data #
-    if request.method == 'GET':
-        form.name.data = event.title
-        form.venue.data = event.venue
-        form.description.data = event.description
-        form.date.data = event.start_time.date()
-        form.start_time.data = event.start_time.time()
-        form.end_time.data = event.end_time.time()
-        form.price.data = float(event.price)
-        form.ticket_quantity.data = event.ticket_quantity
-        form.capacity.data = event.capacity
-        form.category.data = event.category
-        form.image_url.data = event.image_url
-        
-    if form.validate_on_submit():
-        try:
-            start_datetime = datetime.combine(form.date.data, form.start_time.data)
-            end_datetime = datetime.combine(form.date.data, form.end_time.data)
-
-            event.title=form.name.data
-            event.venue=form.venue.data
-            event.description=form.description.data
-            event.start_time=start_datetime
-            event.end_time=end_datetime
-            event.price=float(form.price.data)
-            event.ticket_quantity=form.ticket_quantity.data
-            event.capacity=form.capacity.data
-            event.category=form.category.data
-            event.image_url=form.image_url.data if form.image_url.data else event.image_url
-            
-          
-            db.session.commit()
-            flash('Event updated successfully.', 'success')
-            return redirect(url_for('main.index'))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Errors occured in updating events: {str(e)}', 'error')
-
-    return render_template('create.html', form=form, event=event, event_id=event.id, action='Update Event')
-
-# Route for user to cancel events
-@events_bp.route('/cancel/<int:event_id>', methods=['POST'])
-@login_required
-def cancel_event(event_id):
-    event = db.session.get(Event, event_id)
-    if event is None:
-        abort(404)
-
-    # Check user is authorized or not
-    if event.user_id != current_user.id:
-        flash('You are not authorized to cancel this event.', 'warning')
-        return redirect(url_for('main.index'))
-    try:
-        event.status = 'Cancelled'
+        db.session.add(event)
         db.session.commit()
-        flash('Event has been cancelled.', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Event cannot be cancelled: {str(e)}', 'error')
-    return redirect(url_for('main.index'))
 
-        
+        flash('Event created successfully!', 'success')
+        return redirect(url_for('main.event', event_id=event.id))
 
-                
-                
-            
-            
+    return render_template('create.html', **template_context)
 
 
+@main_bp.route('/events/<int:event_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_event(event_id: int):
+    event = db.session.get(Event, event_id)
+    if event is None:
+        abort(404)
+
+    form = EventForm(obj=event)
+    form.submit.label.text = 'Update Event'
+
+    if request.method == 'GET':
+        if event.start_time:
+            form.start_date.data = event.start_time.date()
+            form.start_time.data = event.start_time.time()
+        if event.end_time:
+            form.end_time.data = event.end_time.time()
+        elif event.start_time:
+            form.end_time.data = event.start_time.time()
+
+    template_context = {
+        'form': form,
+        'form_action': url_for('main.edit_event', event_id=event.id),
+        'page_title': f'Edit {event.title}',
+        'page_heading': f'Edit "{event.title}"',
+        'page_subheading': 'Update the event details and save changes.',
+        'back_url': url_for('main.event', event_id=event.id),
+        'back_label': 'Back to Event',
+        'active_nav': 'create',
+        'is_edit': True,
+    }
+
+    if form.validate_on_submit():
+        start_datetime, end_datetime, is_valid = _resolve_event_datetimes(form)
+        if not is_valid:
+            return render_template('create.html', **template_context)
+
+        event.title = form.title.data
+        event.venue = form.venue.data
+        event.description = form.description.data
+        event.start_time = start_datetime
+        event.end_time = end_datetime
+        event.price = form.price.data
+        event.status = form.status.data
+        event.category = form.category.data
+        event.image_url = form.image_url.data
+
+        db.session.commit()
+
+        flash('Event updated successfully!', 'success')
+        return redirect(url_for('main.event', event_id=event.id))
+
+    return render_template('create.html', **template_context)
 
 
+@main_bp.route('/events/<int:event_id>/book', methods=['POST'])
+@login_required
+def book_event(event_id: int):
+    event = db.session.get(Event, event_id)
+    if event is None:
+        abort(404)
 
-            
-     
+    form = BookingForm()
+    if not form.validate_on_submit():
+        flash('Please select a valid ticket quantity.', 'danger')
+        return redirect(url_for('main.event', event_id=event.id))
+
+    if event.is_expired:
+        flash('This event has already concluded. Booking is unavailable.', 'warning')
+        return redirect(url_for('main.event', event_id=event.id))
+
+    order = Order(user=current_user, event=event, quantity=form.quantity.data)
+    db.session.add(order)
+    db.session.commit()
+
+    flash('Tickets booked successfully! View them in your bookings.', 'success')
+    return redirect(url_for('main.bookings'))

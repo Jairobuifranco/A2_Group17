@@ -1,7 +1,7 @@
 # import flask - from 'package' import 'Class'
 from flask import Flask 
 try:
-    from flask_bootstrap import Bootstrap5
+    from bootstrap_flask import Bootstrap5
 except ModuleNotFoundError:
     Bootstrap5 = None
 from flask_sqlalchemy import SQLAlchemy
@@ -19,11 +19,6 @@ def create_app():
     app.secret_key = 'somesecretkey'
     # set the app configuration data 
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///sitedata.sqlite'
-
-    # the folder to store images #
-    UPLOAD_FOLDER = '/static/image'
-    app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
     # initialise db with flask app
     db.init_app(app)
 
@@ -43,12 +38,10 @@ def create_app():
     from .models import User
     @login_manager.user_loader
     def load_user(user_id):
-       return db.session.get(User, int(user_id))
+       return db.session.scalar(db.select(User).where(User.id==user_id))
 
     from . import views
     app.register_blueprint(views.main_bp)
-    # register blueprint
-    app.register_blueprint(views.events_bp, url_prefix='/events')
 
     try:
         from . import auth
