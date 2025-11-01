@@ -1,15 +1,19 @@
+# macOS
+.DS_Store
+
+# Database
+*.sqlite
+instance/
+
 # Virtual environment
 venv/
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
-# Database
-instance/
-
-# OS files
-.DS_Store
+.Python
 
 # IDE
 .vscode/

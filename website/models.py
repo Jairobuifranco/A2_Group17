@@ -10,12 +10,9 @@ class User(db.Model, UserMixin):
     name = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    phone = db.Column(db.String(20))
-    street_address = db.Column(db.String(255))
 
     orders = db.relationship('Order', back_populates='user', cascade='all, delete-orphan')
     comments = db.relationship('Comment', back_populates='user', cascade='all, delete-orphan')
-    events = db.relationship('Event', back_populates='creator', cascade='all, delete-orphan')
 
 
 class Event(db.Model):
@@ -25,16 +22,20 @@ class Event(db.Model):
     description = db.Column(db.Text, nullable=False)
     start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=False)
-    price = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+    general_price = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+    general_tickets = db.Column(db.Integer, nullable=False, default=1)
+    vip_price = db.Column(db.Integer, nullable=False, default=0)
+    vip_tickets = db.Column(db.Integer, nullable=False, default=1)
     status = db.Column(db.String(40), nullable=False, default='Open')
     category = db.Column(db.String(60))
     image_url = db.Column(db.String(255))
 
+    # Add user id into event table as FK #
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, default=1)
+    user = db.relationship('User', backref='events')
+
     comments = db.relationship('Comment', back_populates='event', cascade='all, delete-orphan')
     orders = db.relationship('Order', back_populates='event', cascade='all, delete-orphan')
-
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    creator = db.relationship('User', back_populates='events')
 
     @property
     def is_expired(self) -> bool:
