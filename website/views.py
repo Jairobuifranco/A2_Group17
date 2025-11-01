@@ -383,7 +383,7 @@ def book_event(event_id: int):
     db.session.add(new_order)
     db.session.commit()
 
-    # update event status (Open / Sold Out)
+    # update event status (Open/Sold Out)
     recalc_event_status(event.id)
 
     flash('Tickets booked successfully', 'success')
