@@ -3,6 +3,19 @@ from wtforms.fields import TextAreaField, SubmitField, StringField, PasswordFiel
 from wtforms.validators import InputRequired, Length, Email, EqualTo, NumberRange, ValidationError
 from datetime import date
 from flask_wtf.file import FileAllowed
+from wtforms.fields import (
+    DateField,
+    IntegerField,
+    DecimalField,
+    SelectField,
+    StringField,
+    SubmitField,
+    TextAreaField,
+    TimeField,
+    PasswordField,
+)
+from wtforms.validators import Email, DataRequired, EqualTo, InputRequired, Length, NumberRange
+
 
 # creates the login information
 class LoginForm(FlaskForm):
@@ -67,3 +80,16 @@ class EventForm(FlaskForm):
         
         
         
+
+class BookingForm(FlaskForm):
+    quantity = IntegerField(
+        "Tickets",
+        default=1,
+        validators=[DataRequired(), NumberRange(min=1, max=500)]
+    )
+    ticket_type = SelectField(
+        "Type",
+        choices=[("General", "General"), ("VIP", "VIP")],
+        default="General"
+    )
+    submit = SubmitField("Book Now")
