@@ -1,6 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms.fields import (
     DateField,
+    IntegerField,
     DecimalField,
     SelectField,
     StringField,
@@ -9,7 +10,7 @@ from wtforms.fields import (
     TimeField,
     PasswordField,
 )
-from wtforms.validators import Email, EqualTo, InputRequired, Length, NumberRange
+from wtforms.validators import Email, DataRequired, EqualTo, InputRequired, Length, NumberRange
 
 
 # creates the login information
@@ -77,11 +78,16 @@ class EventForm(FlaskForm):
     submit = SubmitField("Save Event")
 
 
+
 class BookingForm(FlaskForm):
-    quantity = SelectField(
+    quantity = IntegerField(
         "Tickets",
-        choices=[(1, "1"), (2, "2"), (3, "3"), (4, "4"), (5, "5"), (6, "6"), (7, "7"), (8, "8")],
-        coerce=int,
-        validators=[InputRequired()],
+        default=1,
+        validators=[DataRequired(), NumberRange(min=1, max=500)]
+    )
+    ticket_type = SelectField(
+        "Type",
+        choices=[("General", "General"), ("VIP", "VIP")],
+        default="General"
     )
     submit = SubmitField("Book Now")
