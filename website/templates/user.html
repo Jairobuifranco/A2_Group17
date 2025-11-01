@@ -147,6 +147,28 @@
                       <div class="invalid-feedback d-block">{{ register_form.email.errors[0] }}</div>
                     {% endif %}
                   </div>
+                  {% set register_phone_classes = 'form-control' %}
+                  {% if register_form.phone.errors %}
+                    {% set register_phone_classes = register_phone_classes + ' is-invalid' %}
+                  {% endif %}
+                  <div class="mb-3">
+                    {{ register_form.phone.label(class_='form-label') }}
+                    {{ register_form.phone(class_=register_phone_classes, placeholder='+61 --- --- ---') }}
+                    {% if register_form.phone.errors %}
+                      <div class="invalid-feedback d-block">{{ register_form.phone.errors[0] }}</div>
+                    {% endif %}
+                  </div>
+                  {% set register_address_classes = 'form-control' %}
+                  {% if register_form.street_address.errors %}
+                    {% set register_address_classes = register_address_classes + ' is-invalid' %}
+                  {% endif %}
+                  <div class="mb-3">
+                    {{ register_form.street_address.label(class_='form-label') }}
+                    {{ register_form.street_address(class_=register_address_classes, placeholder='123 Example St, South Brisbane') }}
+                    {% if register_form.street_address.errors %}
+                      <div class="invalid-feedback d-block">{{ register_form.street_address.errors[0] }}</div>
+                    {% endif %}
+                  </div>
                   {% set register_password_classes = 'form-control' %}
                   {% if register_form.password.errors %}
                     {% set register_password_classes = register_password_classes + ' is-invalid' %}

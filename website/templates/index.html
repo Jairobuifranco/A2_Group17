@@ -199,7 +199,10 @@
               {% endif %}
             </p>
             <p class="mb-2"><i class="bi bi-geo-alt"></i> {{ event.venue }}</p>
-            <span class="badge text-bg-light border badge-price"><i class="bi bi-currency-dollar"></i> {{ '{:.2f}'.format(event.price) if event.price is not none else '0.00' }}</span>
+            <div class="d-flex gap-1 flex-wrap">
+            <span class="badge text-bg-light border small">General ${{ "%.2f"|format(event.general_price) }}</span>
+            <span class="badge text-bg-warning border small">VIP ${{ "%.2f"|format(event.vip_price) }}</span>
+        </div>
             {% if event.is_expired %}
               <p class="text-muted small mb-0 mt-2"><i class="bi bi-hourglass-bottom"></i> Event ended</p>
             {% endif %}
@@ -207,9 +210,6 @@
           <div class="card-footer bg-white border-0">
             <div class="d-grid gap-2">
               <a href="{{ url_for('main.event', event_id=event.id) }}" class="btn btn-primary">View Details</a>
-              {% if current_user.is_authenticated %}
-                <a href="{{ url_for('main.edit_event', event_id=event.id) }}" class="btn btn-outline-secondary">Edit Event</a>
-              {% endif %}
             </div>
           </div>
         </div>

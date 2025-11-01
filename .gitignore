@@ -1,7 +1,23 @@
-.venv/
+# macOS
+.DS_Store
+
+# Database
+*.sqlite
+instance/
+
+# Virtual environment
 venv/
+
+# Python
 __pycache__/
 *.pyc
-instance/*.sqlite
-instance/*.sqbpro
-website/**/__pycache__/
+*.pyo
+*.pyd
+.Python
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log

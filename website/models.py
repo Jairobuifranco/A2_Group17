@@ -12,6 +12,9 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
 
+    orders = db.relationship('Order', back_populates='user', cascade='all, delete-orphan')
+    comments = db.relationship('Comment', back_populates='user', cascade='all, delete-orphan')
+    events = db.relationship('Event', back_populates='creator', cascade='all, delete-orphan')
     # relationships
     orders = db.relationship("Order", back_populates="user", cascade="all, delete-orphan")
     comments = db.relationship("Comment", back_populates="user", cascade="all, delete-orphan")
@@ -26,6 +29,24 @@ class Event(db.Model):
     __tablename__ = "event"
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(150), nullable=False)
+    venue = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    start_time = db.Column(db.DateTime, nullable=False)
+    end_time = db.Column(db.DateTime, nullable=False)
+    general_price = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+    general_tickets = db.Column(db.Integer, nullable=False, default=1)
+    vip_price = db.Column(db.Integer, nullable=False, default=0)
+    vip_tickets = db.Column(db.Integer, nullable=False, default=1)
+    status = db.Column(db.String(40), nullable=False, default='Open')
+    category = db.Column(db.String(60))
+    image_url = db.Column(db.String(255))
+
+    # Add user id into event table as FK #
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, default=1)
+    user = db.relationship('User', backref='events')
+
+    comments = db.relationship('Comment', back_populates='event', cascade='all, delete-orphan')
+    orders = db.relationship('Order', back_populates='event', cascade='all, delete-orphan')
     venue = db.Column(db.String(150))
     description = db.Column(db.Text)
     start_time = db.Column(db.DateTime)
@@ -82,6 +103,8 @@ class Order(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     event_id = db.Column(db.Integer, db.ForeignKey("event.id"), nullable=False)
 
+    user = db.relationship('User', back_populates='orders')
+    event = db.relationship('Event', back_populates='orders')
     # ensure these columns exist in the table (add them if your DB is older)
     ticket_type = db.Column(db.String(20), nullable=False, default="General")
     created_at  = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
