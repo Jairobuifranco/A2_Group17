@@ -1,32 +1,26 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from flask_login import UserMixin
 from . import db  # the SQLAlchemy() you init in website/__init__.py
 
 
-
-# Users
+# -------------------- Users --------------------
 
 class User(db.Model, UserMixin):
-    __tablename__ = "user"   
+    __tablename__ = "user"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
 
     # relationships
-    orders = db.relationship(
-        "Order", back_populates="user", cascade="all, delete-orphan"
-    )
-    comments = db.relationship(
-        "Comment", back_populates="user", cascade="all, delete-orphan"
-    )
+    orders = db.relationship("Order", back_populates="user", cascade="all, delete-orphan")
+    comments = db.relationship("Comment", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<User {self.id} {self.email}>"
 
 
-
-# Events
+# -------------------- Events --------------------
 
 class Event(db.Model):
     __tablename__ = "event"
@@ -34,19 +28,15 @@ class Event(db.Model):
     title = db.Column(db.String(150), nullable=False)
     venue = db.Column(db.String(150))
     description = db.Column(db.Text)
-    start_time = db.Column(db.DateTime)  
+    start_time = db.Column(db.DateTime)
     end_time = db.Column(db.DateTime)
     price = db.Column(db.Numeric(10, 2), nullable=False, default=0)
     status = db.Column(db.String(40), nullable=False, default="Open")
     category = db.Column(db.String(60))
     image_url = db.Column(db.String(255))
 
-    comments = db.relationship(
-        "Comment", back_populates="event", cascade="all, delete-orphan"
-    )
-    orders = db.relationship(
-        "Order", back_populates="event", cascade="all, delete-orphan"
-    )
+    comments = db.relationship("Comment", back_populates="event", cascade="all, delete-orphan")
+    orders   = db.relationship("Order",   back_populates="event", cascade="all, delete-orphan")
 
     @property
     def is_expired(self) -> bool:
@@ -65,6 +55,8 @@ class Event(db.Model):
         return base_status or 'Open'
 
 
+# -------------------- Comments --------------------
+
 class Comment(db.Model):
     __tablename__ = "comment"
     id = db.Column(db.Integer, primary_key=True)
@@ -74,35 +66,36 @@ class Comment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     event_id = db.Column(db.Integer, db.ForeignKey("event.id"), nullable=False)
 
-    user = db.relationship("User", back_populates="comments")
+    user  = db.relationship("User",  back_populates="comments")
     event = db.relationship("Event", back_populates="comments")
 
     def __repr__(self) -> str:
         return f"<Comment {self.id} user={self.user_id} event={self.event_id}>"
 
 
-
-# Orders (bookings)
-
+# -------------------- Orders (bookings) --------------------
 
 class Order(db.Model):
-    __tablename__ = "order"  
+    __tablename__ = "order"
     id = db.Column(db.Integer, primary_key=True)
     quantity = db.Column(db.Integer, nullable=False, default=1)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     event_id = db.Column(db.Integer, db.ForeignKey("event.id"), nullable=False)
 
-    user = db.relationship("User", back_populates="orders")
+    # ensure these columns exist in the table (add them if your DB is older)
+    ticket_type = db.Column(db.String(20), nullable=False, default="General")
+    created_at  = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    is_cancelled = db.Column(db.Boolean, nullable=False, default=False)
+
+    # relationships — use back_populates on both sides (no backref here)
     event = db.relationship("Event", back_populates="orders")
+    user  = db.relationship("User",  back_populates="orders")
 
     def __repr__(self) -> str:
         return f"<Order {self.id} user={self.user_id} event={self.event_id} qty={self.quantity}>"
 
 
-
-# This will let us read the audit log.
+# -------------------- Booking audit (optional) --------------------
 
 class BookingEvent(db.Model):
     __tablename__ = "booking_events"

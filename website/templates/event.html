@@ -4,66 +4,55 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>{{ event.title }} — Local Concerts</title>
-
-  <!-- bootstrap css, icons, and our stylesheet -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
   <link rel="stylesheet" href="{{ url_for('static', filename='style/styles.css') }}"/>
 </head>
 <body>
-
-
-  <!-- top navbar with site name, nav links, and simple auth placeholders -->
   <nav class="navbar navbar-expand-lg bg-white border-bottom">
     <div class="container">
       <a class="navbar-brand fw-bold" href="{{ url_for('main.index') }}">
         <i class="bi bi-music-note-beamed me-1"></i>Local<span>Concerts</span>
       </a>
-
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
         <span class="navbar-toggler-icon"></span>
       </button>
-
       <div class="collapse navbar-collapse" id="navMain">
         <ul class="navbar-nav me-auto">
           <li class="nav-item"><a class="nav-link" href="{{ url_for('main.index') }}">Home</a></li>
-          <li class="nav-item"><a class="nav-link" href="create.html">Create Event</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('main.create_event') }}">Create Event</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for('main.bookings') }}">Bookings</a></li>
         </ul>
-
-        <div class="d-none d-md-flex gap-2">
-          <a class="btn btn-outline-secondary btn-sm" href="#">Log in</a>
-          <a class="btn btn-primary btn-sm" href="#">Sign up</a>
+        <div class="ms-3 d-flex align-items-center gap-2">
+          {% if current_user.is_authenticated %}
+            <span class="badge text-bg-success">Signed in as {{ current_user.name }}</span>
+            <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('auth.logout') }}">Log out</a>
+          {% else %}
+            <a class="btn btn-primary btn-sm" href="{{ url_for('auth.login') }}">Log in</a>
+            <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('auth.login', tab='register') }}">Sign up</a>
+          {% endif %}
         </div>
       </div>
     </div>
   </nav>
 
   <main class="container py-4">
-
-    <!-- flash messages (capacity warnings etc.) -->
+    <!-- Flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="mb-3">
           {% for cat, msg in messages %}
-            <div class="alert alert-{{ 'warning' if cat == 'warning' else 'success' }} mb-2">
-              {{ msg }}
-            </div>
+            <div class="alert alert-{{ 'warning' if cat == 'warning' else 'success' }}">{{ msg }}</div>
           {% endfor %}
         </div>
       {% endif %}
     {% endwith %}
 
     <div class="row g-4">
-      <!-- left: hero image + about -->
+      <!-- Left: Image and About section -->
       <div class="col-lg-8">
         <div class="ratio ratio-16x9 mb-3">
-          <img
-            src="{{ event_image_url }}"
-            alt="{{ event.title }}"
-            class="w-100 h-100 rounded"
-            style="object-fit: cover;"
-          />
+          <img src="{{ event_image_url }}" alt="{{ event.title }}" class="w-100 h-100 rounded" style="object-fit: cover;">
         </div>
 
         <div class="card">
@@ -78,31 +67,23 @@
         </div>
       </div>
 
-      <!-- right: details + booking + comments -->
+      <!-- Right: Booking section -->
       <div class="col-lg-4">
         <div class="card">
           <div class="card-body">
-
-            <!-- title + status badge -->
-            <div class="d-flex align-items-start justify-content-between">
-              <h1 class="h4 mb-2">{{ event.title }}</h1>
+            <!-- Event Header -->
+            <div class="d-flex align-items-start justify-content-between mb-2">
+              <h1 class="h4 mb-0">{{ event.title }}</h1>
               {% if event.status %}
-                <span class="badge {{ 'text-bg-success' if event.status|lower == 'open' else 'text-bg-secondary' }}">
-                  {{ event.status }}
-                </span>
+                <span class="badge {{ 'text-bg-success' if event.status|lower == 'open' else 'text-bg-secondary' }}">{{ event.status }}</span>
               {% endif %}
             </div>
 
-            <!-- date / time / venue -->
+            <!-- Event Info -->
             <ul class="list-unstyled small mb-3">
               {% if event.start_time %}
-                <li class="mb-1">
-                  <i class="bi bi-calendar-event me-1"></i>
-                  <strong>Date:</strong> {{ event.start_time.strftime('%Y-%m-%d') }}
-                </li>
-                <li class="mb-1">
-                  <i class="bi bi-clock me-1"></i>
-                  <strong>Time:</strong>
+                <li><i class="bi bi-calendar-event me-1"></i><strong>Date:</strong> {{ event.start_time.strftime('%Y-%m-%d') }}</li>
+                <li><i class="bi bi-clock me-1"></i><strong>Time:</strong>
                   {% if event.end_time %}
                     {{ event.start_time.strftime('%H:%M') }} – {{ event.end_time.strftime('%H:%M') }}
                   {% else %}
@@ -111,64 +92,60 @@
                 </li>
               {% endif %}
               {% if event.venue %}
-                <li class="mb-1">
-                  <i class="bi bi-geo-alt me-1"></i>
-                  <strong>Venue:</strong> {{ event.venue }}
-                </li>
+                <li><i class="bi bi-geo-alt me-1"></i><strong>Venue:</strong> {{ event.venue }}</li>
               {% endif %}
             </ul>
 
-            <!-- price -->
             {% if event.price is not none %}
               <span class="badge text-bg-light border mb-3 d-inline-block">
-                <i class="bi bi-currency-dollar"></i> {{ '%.2f'|format(event.price) }} per ticket
+                <i class="bi bi-currency-dollar"></i> {{ '%.2f'|format(event.price) }} per General ticket
               </span>
             {% endif %}
 
-            <!-- booking: closed vs open -->
+            <!-- Booking Form -->
             {% if event.status and event.status|lower != 'open' %}
-              <div class="alert alert-warning mb-3">
-                Sorry, this event is not accepting bookings.
-              </div>
-              <button class="btn btn-secondary w-100" disabled>
-                <i class="bi bi-lock me-1"></i> Booking Closed
-              </button>
-              <div class="form-text mt-2">Status: {{ event.status }}</div>
+              <div class="alert alert-warning mb-3">Sorry, this event is not accepting bookings.</div>
+              <button class="btn btn-secondary w-100" disabled><i class="bi bi-lock me-1"></i> Booking Closed</button>
             {% else %}
-              <form method="post" action="{{ url_for('main.create_order', event_id=event.id) }}">
-                <div class="row g-2 mb-3">
-                  <div class="col-6">
-                    <label class="form-label">Tickets</label>
-                    <input class="form-control" type="number" name="qty" min="1" value="1" required>
+              {% if current_user.is_authenticated %}
+                <form method="post" action="{{ url_for('main.book_event', event_id=event.id) }}">
+                  {{ booking_form.hidden_tag() }}
+
+                  <div class="row g-2 mb-3">
+                    <div class="col-6">
+                      <label class="form-label">Tickets</label>
+                      {{ booking_form.quantity(class_='form-control', min=1, step=1) }}
+                    </div>
+
+                    <div class="col-6">
+                      <label class="form-label">Ticket Type</label>
+                      {{ booking_form.ticket_type(class_='form-select') }}
+                    </div>
                   </div>
-                  <div class="col-6">
-                    <label class="form-label">Type</label>
-                    <select class="form-select" name="ticket_type">
-                      <option>General</option>
-                      <option>VIP</option>
-                    </select>
-                  </div>
-                </div>
-                <input type="hidden" name="user_id" value="1">
-                <button class="btn btn-primary w-100">
-                  <i class="bi bi-ticket-perforated me-1"></i> Book Now
-                </button>
-                <div class="form-text mt-2">This takes you to Booking History.</div>
-              </form>
+
+                  <button class="btn btn-primary w-100">
+                    <i class="bi bi-ticket-perforated me-1"></i> Book Now
+                  </button>
+                  <div class="form-text mt-2">This takes you to your Booking History.</div>
+                </form>
+              {% else %}
+                <a class="btn btn-primary w-100" href="{{ url_for('auth.login', next=url_for('main.event', event_id=event.id)) }}">
+                  <i class="bi bi-box-arrow-in-right me-1"></i> Log in to Book
+                </a>
+              {% endif %}
             {% endif %}
           </div>
         </div>
 
-        <!-- comments -->
+        <!-- Comments Section -->
         <div class="card mt-3">
           <div class="card-body">
             <h5 class="card-title mb-3">Comments</h5>
-
             {% if comments %}
               <div class="list-group mb-3">
                 {% for c in comments %}
                   <div class="list-group-item">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
+                    <div class="d-flex justify-content-between mb-1">
                       <strong>{{ c.user_name or 'User' }}</strong>
                       <small class="text-muted">{{ c.created_at | bris }}</small>
                     </div>
@@ -181,27 +158,25 @@
             {% endif %}
 
             <form method="post" action="{{ url_for('main.add_comment', event_id=event.id) }}">
+              {% if csrf_token is defined %}{{ csrf_token() }}{% endif %}
               <div class="input-group">
-                <input type="text" class="form-control" name="body" placeholder="Write a comment…" required>
-                {% if csrf_token is defined %}{{ csrf_token() }}{% endif %}
-                <button class="btn btn-outline-secondary">Post Comment</button>
+                <input type="text" name="body" class="form-control" placeholder="Write a comment…" required>
+                <button class="btn btn-outline-secondary">Post</button>
               </div>
             </form>
           </div>
         </div>
-
       </div>
     </div>
   </main>
 
   <footer class="py-4 bg-white border-top">
     <div class="container d-flex justify-content-between align-items-center">
-      <span class="text-muted small">&copy; <span>2025</span> LocalConcerts</span>
+      <span class="text-muted small">&copy; 2025 LocalConcerts</span>
       <a class="small text-decoration-none" href="#">Terms & Privacy</a>
     </div>
   </footer>
 
-  <!-- bootstrap js for dropdowns, collapse, etc -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -9,7 +9,7 @@ from sqlalchemy import or_
 from sqlalchemy import text
 
 from . import db
-from .models import Event, Order
+from .models import Event, Order, Comment
 from .forms import EventForm, BookingForm
 
 from datetime import datetime, timezone, timedelta
@@ -164,14 +164,14 @@ def index():
 
 @main_bp.get("/events/<int:event_id>")
 def event(event_id: int):
-    """Shows one event page with its details, booking state, and comments."""
+    """Show one event page with details, booking form, and comments."""
     this_event = db.session.get(Event, event_id)
     if not this_event:
         abort(404)
 
     booking_form = BookingForm()
 
-    # use the row we just loaded
+    #  image URL 
     image_url = this_event.image_url
     if image_url:
         if image_url.startswith(("http://", "https://")):
@@ -184,38 +184,58 @@ def event(event_id: int):
     else:
         resolved_image_url = url_for("static", filename="img/hero1.jpg")
 
-    # pass the row to the template
+    # comments (newest at top)
+    rows = (
+        db.session.query(Comment)
+        .filter(Comment.event_id == event_id)
+        .order_by(Comment.created_at.desc())
+        .all()
+    )
+
+    # comments: body, created_at, user_name
+    comments = [
+        {
+            "body": c.body,
+            "created_at": c.created_at,
+            "user_name": (c.user.name if getattr(c, "user", None) else None),
+        }
+        for c in rows
+    ]
+
     return render_template(
         "event.html",
         event=this_event,
         event_image_url=resolved_image_url,
         booking_form=booking_form,
+        comments=comments,
     )
 
 
-@main_bp.get("/bookings")
+@main_bp.route('/bookings')
 @login_required
 def bookings():
-    rows = db.session.execute(
-        text("""
-            SELECT
-              o.id            AS order_id,
-              o.quantity      AS quantity,
-              o.ticket_type   AS ticket_type,
-              o.is_cancelled  AS is_cancelled,
-              o.created_at    AS booked_at,
-              e.title         AS event_title,
-              e.image_url     AS image_url
-            FROM "order" o
-            JOIN event e ON e.id = o.event_id
-            WHERE o.user_id = :uid
-              AND o.is_cancelled = 0
-            ORDER BY o.created_at DESC
-        """),
-        {"uid": current_user.id}
-    ).mappings().all()
+    orders = (
+        db.session.query(Order)
+        .filter(Order.user_id == current_user.id, Order.is_cancelled == False)
+        .order_by(Order.created_at.desc())
+        .all()
+    )
 
-    return render_template("bookings.html", bookings=rows)
+    # Shape to match template keys: order_id, quantity, ticket_type, is_cancelled, booked_at, event_title, image_url
+    shaped = []
+    for o in orders:
+        ev = o.event  # assumes relationship Order.event exists
+        shaped.append({
+            "order_id": o.id,
+            "quantity": o.quantity,
+            "ticket_type": getattr(o, "ticket_type", "General"),
+            "is_cancelled": o.is_cancelled,
+            "booked_at": o.created_at,            # template will do |bris
+            "event_title": ev.title if ev else "Event",
+            "image_url": (ev.image_url if ev else None),
+        })
+
+    return render_template('bookings.html', orders=orders)
 
 
 @main_bp.route('/events/create', methods=['GET', 'POST'])
@@ -323,72 +343,51 @@ def book_event(event_id: int):
 
     form = BookingForm()
     if not form.validate_on_submit():
-        flash('Please select a valid ticket quantity.', 'danger')
+        flash('Please select a valid ticket quantity.', 'warning')
         return redirect(url_for('main.event', event_id=event.id))
 
-    if event.is_expired:
+    if getattr(event, "is_expired", False):
         flash('This event has already concluded. Booking is unavailable.', 'warning')
         return redirect(url_for('main.event', event_id=event.id))
 
-    order = Order(user=current_user, event=event, quantity=form.quantity.data)
-    db.session.add(order)
-    db.session.commit()
+    # --- capacity math (active, not-cancelled orders) ---
+    already_booked = db.session.execute(
+        text("""
+            SELECT COALESCE(SUM(quantity), 0) AS total_qty
+            FROM "order"
+            WHERE event_id = :eid AND is_cancelled = 0
+        """),
+        {"eid": event_id}
+    ).scalar_one()
 
-    flash('Tickets booked successfully! View them in your bookings.', 'success')
-    return redirect(url_for('main.bookings'))
+    capacity_left = MAX_CAPACITY - (already_booked or 0)
+    qty = int(form.quantity.data or 1)
+    ticket_type = form.ticket_type.data or "General"
 
-@main_bp.route("/orders/<int:event_id>/create", methods=["POST", "GET"])
-@login_required
-def create_order(event_id: int):
-    """Creates a booking for an event if there are enough tickets left."""
-    # block direct GET access (we only want POST from the form)
-    if request.method == "GET":
-        return redirect(url_for("main.event", event_id=event_id))
-
-    # fake user for now (we don't have login wired yet)
-    user_id = int(request.form.get("user_id", 1))
-
-    # requested quantity
-    try:
-        qty = int(request.form.get("qty", 1))
-    except ValueError:
-        qty = 1
-    if qty < 1:
-        qty = 1
-
-    # General / VIP etc.
-    ticket_type = request.form.get("ticket_type", "General")
-
-    # how many tickets are already booked (not cancelled)
-    current_row = db.session.execute(text("""
-        SELECT COALESCE(SUM(quantity), 0) AS total_qty
-        FROM "order"
-        WHERE event_id = :eid AND is_cancelled = 0
-    """), {"eid": event_id}).fetchone()
-    already_booked = current_row.total_qty or 0
-    capacity_left = MAX_CAPACITY - already_booked
-
-    # reject if no capacity or if they asked for too many
     if capacity_left <= 0:
         flash("Sorry, this event is not accepting bookings.", "warning")
-        return redirect(url_for("main.event", event_id=event_id))
+        return redirect(url_for('main.event', event_id=event.id))
+
     if qty > capacity_left:
         flash(f"Only {capacity_left} tickets left. Please reduce your quantity.", "warning")
-        return redirect(url_for("main.event", event_id=event_id))
+        return redirect(url_for('main.event', event_id=event.id))
 
-    # save the booking in UTC time (we convert to Brisbane in the template)
-    created_utc = datetime.now(timezone.utc)
-    db.session.execute(text("""
-        INSERT INTO "order" (quantity, created_at, user_id, event_id, ticket_type, is_cancelled)
-        VALUES (:q, :created_at, :uid, :eid, :tt, 0)
-    """), {"q": qty, "created_at": created_utc, "uid": user_id, "eid": event_id, "tt": ticket_type})
+    # --- create order (ORM) ---
+    new_order = Order(
+        user_id=current_user.id,
+        event_id=event.id,
+        quantity=qty,
+        ticket_type=ticket_type,   # make sure Order has this column
+        is_cancelled=False
+    )
+    db.session.add(new_order)
     db.session.commit()
 
-    # update event status now that we've added this booking
-    recalc_event_status(event_id)
+    # update event status (Open / Sold Out)
+    recalc_event_status(event.id)
 
-    flash("Booking created!", "success")
-    return redirect(url_for("main.bookings"))
+    flash('Tickets booked successfully', 'success')
+    return redirect(url_for('main.bookings'))
 
 
 @main_bp.route("/orders/<int:order_id>/cancel", methods=["POST"])
@@ -420,18 +419,18 @@ def cancel_order(order_id: int):
 @main_bp.post("/events/<int:event_id>/comments")
 @login_required
 def add_comment(event_id: int):
-    """Adds a new comment to the event page."""
-    body = request.form.get("body", "").strip()
+    body = (request.form.get("body") or "").strip()
     if not body:
-        flash("Comment cannot be empty.")
+        flash("Comment cannot be empty.", "warning")
         return redirect(url_for("main.event", event_id=event_id))
 
-    # store comment using fake user_id=1 for now
-    db.session.execute(text("""
-        INSERT INTO comment (body, created_at, user_id, event_id)
-        VALUES (:b, datetime('now'), :u, :e)
-    """), {"b": body, "u": 1, "e": event_id})
+    event = db.session.get(Event, event_id)
+    if not event:
+        abort(404)
+
+    c = Comment(user_id=current_user.id, event_id=event.id, body=body)
+    db.session.add(c)
     db.session.commit()
 
-    flash("Comment posted.")
-    return redirect(url_for("main.event", event_id=event_id))
+    flash("Comment posted.", "success")
+    return redirect(url_for("main.event", event_id=event.id))
