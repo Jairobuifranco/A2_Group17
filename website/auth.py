@@ -1,7 +1,6 @@
 from flask import Blueprint, flash, render_template, request, url_for, redirect
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, login_required, logout_user, current_user
-from sqlalchemy import or_
 from .models import User
 from .forms import LoginForm, RegisterForm
 from . import db
@@ -12,6 +11,7 @@ auth_bp = Blueprint('auth', __name__)
 # this is a hint for a login function
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
+    # Handle both login and registration form submissions.
     login_form = LoginForm(prefix='login')
     register_form = RegisterForm(prefix='register')
     active_tab = request.args.get('tab', 'login')
@@ -22,16 +22,22 @@ def login():
         if register_form.submit.data:
             active_tab = 'register'
             if register_form.validate():
-                user_name = register_form.user_name.data
                 email = register_form.email.data
                 existing_user = db.session.scalar(
-                    db.select(User).where(or_(User.name == user_name, User.email == email))
+                    db.select(User).where(User.email == email)
                 )
                 if existing_user:
-                    flash('An account with that username or email already exists.', 'danger')
+                    flash('An account with that email already exists.', 'danger')
                 else:
                     password_hash = generate_password_hash(register_form.password.data)
-                    new_user = User(name=user_name, email=email, password_hash=password_hash)
+                    new_user = User(
+                        first_name=register_form.first_name.data,
+                        last_name=register_form.last_name.data,
+                        email=email,
+                        password_hash=password_hash,
+                        contact_number=register_form.contact_number.data,
+                        street_address=register_form.street_address.data,
+                    )
                     db.session.add(new_user)
                     db.session.commit()
                     login_user(new_user)
@@ -46,13 +52,13 @@ def login():
         elif login_form.submit.data:
             active_tab = 'login'
             if login_form.validate():
-                user_name = login_form.user_name.data
+                email = login_form.email.data
                 password = login_form.password.data
-                user = db.session.scalar(db.select(User).where(User.name == user_name))
+                user = db.session.scalar(db.select(User).where(User.email == email))
                 if user is None:
-                    flash('Incorrect user name', 'danger')
+                    flash('No account found with that email address.', 'danger')
                 elif not check_password_hash(user.password_hash, password):
-                    flash('Incorrect password', 'danger')  # takes the hash and cleartext password
+                    flash('Incorrect password', 'danger')
                 else:
                     login_user(user)
                     next_url = request.args.get('next')
@@ -75,6 +81,7 @@ def login():
 @auth_bp.route('/logout')
 @login_required
 def logout():
+    # Log the current user out and redirect to home.
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('main.index'))

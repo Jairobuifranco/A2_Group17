@@ -7,11 +7,14 @@
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="{{ url_for('static', filename='style/styles.css') }}"/>
 </head>
 <body>
   <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg bg-white border-bottom">
+  <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
     <div class="container">
       <a class="navbar-brand fw-bold" href="{{ url_for('main.index') }}">
         <i class="bi bi-music-note-beamed me-1"></i>Local<span>Concerts</span>
@@ -76,15 +79,15 @@
               <div class="tab-pane fade {% if not is_register %}show active{% endif %}" id="tabLogin" role="tabpanel" aria-labelledby="login-tab" tabindex="0">
                 <form method="post" action="{{ url_for('auth.login') }}" novalidate>
                   {{ login_form.hidden_tag() }}
-                  {% set login_user_classes = 'form-control' %}
-                  {% if login_form.user_name.errors %}
-                    {% set login_user_classes = login_user_classes + ' is-invalid' %}
+                  {% set login_email_classes = 'form-control' %}
+                  {% if login_form.email.errors %}
+                    {% set login_email_classes = login_email_classes + ' is-invalid' %}
                   {% endif %}
                   <div class="mb-3">
-                    {{ login_form.user_name.label(class_='form-label') }}
-                    {{ login_form.user_name(class_=login_user_classes, placeholder='Enter your username') }}
-                    {% if login_form.user_name.errors %}
-                      <div class="invalid-feedback d-block">{{ login_form.user_name.errors[0] }}</div>
+                    {{ login_form.email.label(class_='form-label') }}
+                    {{ login_form.email(class_=login_email_classes, placeholder='you@example.com') }}
+                    {% if login_form.email.errors %}
+                      <div class="invalid-feedback d-block">{{ login_form.email.errors[0] }}</div>
                     {% endif %}
                   </div>
                   {% set login_password_classes = 'form-control' %}
@@ -125,15 +128,26 @@
               <div class="tab-pane fade {% if is_register %}show active{% endif %}" id="tabRegister" role="tabpanel" aria-labelledby="register-tab" tabindex="0">
                 <form method="post" action="{{ url_for('auth.login') }}" novalidate>
                   {{ register_form.hidden_tag() }}
-                  {% set register_name_classes = 'form-control' %}
-                  {% if register_form.user_name.errors %}
-                    {% set register_name_classes = register_name_classes + ' is-invalid' %}
+                  {% set register_first_classes = 'form-control' %}
+                  {% if register_form.first_name.errors %}
+                    {% set register_first_classes = register_first_classes + ' is-invalid' %}
                   {% endif %}
                   <div class="mb-3">
-                    {{ register_form.user_name.label(class_='form-label') }}
-                    {{ register_form.user_name(class_=register_name_classes, placeholder='Choose a username') }}
-                    {% if register_form.user_name.errors %}
-                      <div class="invalid-feedback d-block">{{ register_form.user_name.errors[0] }}</div>
+                    {{ register_form.first_name.label(class_='form-label') }}
+                    {{ register_form.first_name(class_=register_first_classes, placeholder='First name') }}
+                    {% if register_form.first_name.errors %}
+                      <div class="invalid-feedback d-block">{{ register_form.first_name.errors[0] }}</div>
+                    {% endif %}
+                  </div>
+                  {% set register_last_classes = 'form-control' %}
+                  {% if register_form.last_name.errors %}
+                    {% set register_last_classes = register_last_classes + ' is-invalid' %}
+                  {% endif %}
+                  <div class="mb-3">
+                    {{ register_form.last_name.label(class_='form-label') }}
+                    {{ register_form.last_name(class_=register_last_classes, placeholder='Surname') }}
+                    {% if register_form.last_name.errors %}
+                      <div class="invalid-feedback d-block">{{ register_form.last_name.errors[0] }}</div>
                     {% endif %}
                   </div>
                   {% set register_email_classes = 'form-control' %}
@@ -145,6 +159,28 @@
                     {{ register_form.email(class_=register_email_classes, placeholder='you@example.com') }}
                     {% if register_form.email.errors %}
                       <div class="invalid-feedback d-block">{{ register_form.email.errors[0] }}</div>
+                    {% endif %}
+                  </div>
+                  {% set register_contact_classes = 'form-control' %}
+                  {% if register_form.contact_number.errors %}
+                    {% set register_contact_classes = register_contact_classes + ' is-invalid' %}
+                  {% endif %}
+                  <div class="mb-3">
+                    {{ register_form.contact_number.label(class_='form-label') }}
+                    {{ register_form.contact_number(class_=register_contact_classes, placeholder='04XX XXX XXX') }}
+                    {% if register_form.contact_number.errors %}
+                      <div class="invalid-feedback d-block">{{ register_form.contact_number.errors[0] }}</div>
+                    {% endif %}
+                  </div>
+                  {% set register_address_classes = 'form-control' %}
+                  {% if register_form.street_address.errors %}
+                    {% set register_address_classes = register_address_classes + ' is-invalid' %}
+                  {% endif %}
+                  <div class="mb-3">
+                    {{ register_form.street_address.label(class_='form-label') }}
+                    {{ register_form.street_address(class_=register_address_classes, placeholder='123 Example St, Brisbane QLD') }}
+                    {% if register_form.street_address.errors %}
+                      <div class="invalid-feedback d-block">{{ register_form.street_address.errors[0] }}</div>
                     {% endif %}
                   </div>
                   {% set register_password_classes = 'form-control' %}

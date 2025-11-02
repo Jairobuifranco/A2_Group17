@@ -6,11 +6,14 @@
   <title>Local Concerts — {{ page_title or 'Create Event' }}</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="{{ url_for('static', filename='style/styles.css') }}"/>
 </head>
 <body>
   <!--Navbar-->
-  <nav class="navbar navbar-expand-lg bg-white border-bottom">
+  <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
     <div class="container">
       <a class="navbar-brand fw-bold" href="{{ url_for('main.index') }}"><i class="bi bi-music-note-beamed me-1"></i>Local<span>Concerts</span></a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain"><span class="navbar-toggler-icon"></span></button>
@@ -115,12 +118,12 @@
                     <div class="invalid-feedback d-block">{{ form.end_time.errors[0] }}</div>
                   {% endif %}
                 </div>
-                <div class="col-6 col-md-3">
-                  {% set price_classes = 'form-control' + (' is-invalid' if form.price.errors else '') %}
-                  {{ form.price.label(class_='form-label') }}
-                  {{ form.price(class_=price_classes, step='0.01', min='0', placeholder='39.00') }}
-                  {% if form.price.errors %}
-                    <div class="invalid-feedback d-block">{{ form.price.errors[0] }}</div>
+                <div class="col-12 col-md-3">
+                  {% set price_classes = 'form-control' + (' is-invalid' if form.general_price.errors else '') %}
+                  {{ form.general_price.label(class_='form-label') }}
+                  {{ form.general_price(class_=price_classes, step='0.01', min='0', placeholder='39.00') }}
+                  {% if form.general_price.errors %}
+                    <div class="invalid-feedback d-block">{{ form.general_price.errors[0] }}</div>
                   {% endif %}
                 </div>
                 <div class="col-12 col-md-6">
@@ -131,13 +134,14 @@
                     <div class="invalid-feedback d-block">{{ form.category.errors[0] }}</div>
                   {% endif %}
                 </div>
-                <div class="col-12 col-md-6">
-                  {% set status_classes = 'form-select' + (' is-invalid' if form.status.errors else '') %}
-                  {{ form.status.label(class_='form-label') }}
-                  {{ form.status(class_=status_classes) }}
-                  {% if form.status.errors %}
-                    <div class="invalid-feedback d-block">{{ form.status.errors[0] }}</div>
+                <div class="col-12 col-md-3">
+                  {% set vip_price_classes = 'form-control' + (' is-invalid' if form.vip_price.errors else '') %}
+                  {{ form.vip_price.label(class_='form-label') }}
+                  {{ form.vip_price(class_=vip_price_classes, step='0.01', min='0', placeholder='65.00') }}
+                  {% if form.vip_price.errors %}
+                    <div class="invalid-feedback d-block">{{ form.vip_price.errors[0] }}</div>
                   {% endif %}
+                  <div class="form-text">Leave blank if VIP tickets are unavailable.</div>
                 </div>
                 <div class="col-12 col-md-6">
                   {% set image_classes = 'form-control' + (' is-invalid' if form.image_url.errors else '') %}
@@ -148,11 +152,35 @@
                   {% endif %}
                   <div class="form-text">Use a relative path like <code>img/neon.jpg</code> or paste an absolute URL.</div>
                 </div>
+                <div class="col-12 col-md-3">
+                  {% set general_capacity_classes = 'form-control' + (' is-invalid' if form.general_capacity.errors else '') %}
+                  {{ form.general_capacity.label(class_='form-label') }}
+                  {{ form.general_capacity(class_=general_capacity_classes, min='0', placeholder='120') }}
+                  {% if form.general_capacity.errors %}
+                    <div class="invalid-feedback d-block">{{ form.general_capacity.errors[0] }}</div>
+                  {% endif %}
+                  <div class="form-text">General admission tickets available.</div>
+                </div>
+                <div class="col-12 col-md-3">
+                  {% set vip_capacity_classes = 'form-control' + (' is-invalid' if form.vip_capacity.errors else '') %}
+                  {{ form.vip_capacity.label(class_='form-label') }}
+                  {{ form.vip_capacity(class_=vip_capacity_classes, min='0', placeholder='40') }}
+                  {% if form.vip_capacity.errors %}
+                    <div class="invalid-feedback d-block">{{ form.vip_capacity.errors[0] }}</div>
+                  {% endif %}
+                  <div class="form-text">VIP tickets available.</div>
+                </div>
               </div>
               <div class="d-flex gap-2 mt-4">
                 {{ form.submit(class_='btn btn-primary') }}
                 <a class="btn btn-outline-secondary" href="{{ url_for('main.index') }}">Cancel</a>
               </div>
+              {% if is_edit and event %}
+                <p class="text-muted small mt-2 mb-0">
+                  Current event status: <strong>{{ event.display_status }}</strong>.
+                  Manage availability from the event details page.
+                </p>
+              {% endif %}
             </form>
           </div>
         </div>

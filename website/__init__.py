@@ -1,5 +1,5 @@
 # import flask - from 'package' import 'Class'
-from flask import Flask 
+from flask import Flask
 try:
     from bootstrap_flask import Bootstrap5
 except ModuleNotFoundError:
@@ -11,14 +11,17 @@ db = SQLAlchemy()
 
 # create a function that creates a web application
 # a web server will run this web application
-def create_app():
-  
+def create_app(config: dict | None = None):
+    # Construct the Flask application and register extensions/blueprints.
+
     app = Flask(__name__)  # this is the name of the module/package that is calling this app
-    # Should be set to false in a production environment
-    app.debug = True
-    app.secret_key = 'somesecretkey'
-    # set the app configuration data 
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///sitedata.sqlite'
+    app.config.from_mapping(
+        SECRET_KEY='somesecretkey',
+        SQLALCHEMY_DATABASE_URI='sqlite:///sitedata.sqlite',
+        SQLALCHEMY_TRACK_MODIFICATIONS=False,
+    )
+    if config:
+        app.config.update(config)
     # initialise db with flask app
     db.init_app(app)
 
@@ -49,5 +52,16 @@ def create_app():
         app.logger.warning("Skipping auth blueprint because '%s' is not available", exc.name)
     else:
         app.register_blueprint(auth.auth_bp)
-    
+
+    from flask import render_template
+
+    @app.errorhandler(404)
+    def not_found(error):
+        return render_template('errors/404.html'), 404
+
+    @app.errorhandler(500)
+    def server_error(error):
+        app.logger.error("Unhandled exception: %s", error)
+        return render_template('errors/500.html'), 500
+
     return app
