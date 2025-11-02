@@ -1,23 +1,18 @@
-# macOS
-.DS_Store
-
+# Add this to your .gitignore file
+echo "
 # Database
 *.sqlite
-instance/
+*.db
+instance/*.sqlite
+instance/*.db
 
-# Virtual environment
+# Virtual Environment
 venv/
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+.env
 
 # IDE
 .vscode/
 .idea/
-
-# Logs
-*.log
+*.swp
+*.swo
+" >> .gitignore
