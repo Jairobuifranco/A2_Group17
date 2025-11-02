@@ -1,9 +1,7 @@
 from datetime import datetime, timezone
 from flask_login import UserMixin
-from . import db  # the SQLAlchemy() you init in website/__init__.py
+from . import db 
 
-
-# -------------------- Users --------------------
 
 class User(db.Model, UserMixin):
     __tablename__ = "user"
@@ -11,19 +9,16 @@ class User(db.Model, UserMixin):
     name = db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
+    phone=db.Column(db.String(12))
+    street_address=db.Column(db.Text)
 
     orders = db.relationship('Order', back_populates='user', cascade='all, delete-orphan')
     comments = db.relationship('Comment', back_populates='user', cascade='all, delete-orphan')
     events = db.relationship('Event', back_populates='creator', cascade='all, delete-orphan')
-    # relationships
-    orders = db.relationship("Order", back_populates="user", cascade="all, delete-orphan")
-    comments = db.relationship("Comment", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<User {self.id} {self.email}>"
 
-
-# -------------------- Events --------------------
 
 class Event(db.Model):
     __tablename__ = "event"
@@ -35,7 +30,7 @@ class Event(db.Model):
     end_time = db.Column(db.DateTime, nullable=False)
     general_price = db.Column(db.Numeric(10, 2), nullable=False, default=0)
     general_tickets = db.Column(db.Integer, nullable=False, default=1)
-    vip_price = db.Column(db.Integer, nullable=False, default=0)
+    vip_price = db.Column(db.Numeric(10, 2), nullable=False, default=0)
     vip_tickets = db.Column(db.Integer, nullable=False, default=1)
     status = db.Column(db.String(40), nullable=False, default='Open')
     category = db.Column(db.String(60))
@@ -43,22 +38,11 @@ class Event(db.Model):
 
     # Add user id into event table as FK #
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, default=1)
-    user = db.relationship('User', backref='events')
+    creator = db.relationship('User', back_populates='events')
 
     comments = db.relationship('Comment', back_populates='event', cascade='all, delete-orphan')
     orders = db.relationship('Order', back_populates='event', cascade='all, delete-orphan')
-    venue = db.Column(db.String(150))
-    description = db.Column(db.Text)
-    start_time = db.Column(db.DateTime)
-    end_time = db.Column(db.DateTime)
-    price = db.Column(db.Numeric(10, 2), nullable=False, default=0)
-    status = db.Column(db.String(40), nullable=False, default="Open")
-    category = db.Column(db.String(60))
-    image_url = db.Column(db.String(255))
-
-    comments = db.relationship("Comment", back_populates="event", cascade="all, delete-orphan")
-    orders   = db.relationship("Order",   back_populates="event", cascade="all, delete-orphan")
-
+   
     @property
     def is_expired(self) -> bool:
         """Return True when the event end (or start) time is in the past."""
@@ -76,8 +60,6 @@ class Event(db.Model):
         return base_status or 'Open'
 
 
-# -------------------- Comments --------------------
-
 class Comment(db.Model):
     __tablename__ = "comment"
     id = db.Column(db.Integer, primary_key=True)
@@ -92,9 +74,6 @@ class Comment(db.Model):
 
     def __repr__(self) -> str:
         return f"<Comment {self.id} user={self.user_id} event={self.event_id}>"
-
-
-# -------------------- Orders (bookings) --------------------
 
 class Order(db.Model):
     __tablename__ = "order"
@@ -116,9 +95,6 @@ class Order(db.Model):
 
     def __repr__(self) -> str:
         return f"<Order {self.id} user={self.user_id} event={self.event_id} qty={self.quantity}>"
-
-
-# -------------------- Booking audit (optional) --------------------
 
 class BookingEvent(db.Model):
     __tablename__ = "booking_events"

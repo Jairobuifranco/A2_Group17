@@ -26,17 +26,23 @@ def seed() -> None:
             "alex": User(
                 name="Alex",
                 email="alex@example.com",
-                password_hash=generate_password_hash("Password123!")
+                password_hash=generate_password_hash("Password123!"),
+                phone="+61 412 345 678",
+                street_address="123 Main St, Brisbane City QLD 4000"
             ),
             "sam": User(
                 name="Sam",
                 email="sam@example.com",
-                password_hash=generate_password_hash("Password123!")
+                password_hash=generate_password_hash("Password123!"),
+                phone="+61 434 567 890",
+                street_address="789 Sam Street, Brisbane City QLD 4000"
             ),
             "maria": User(
                 name="Maria",
                 email="maria@example.com",
-                password_hash=generate_password_hash("Password123!")
+                password_hash=generate_password_hash("Password123!"),
+                phone="+61 432 678 945",
+                street_address="780 Maria Street, Brisbane City QLD 4000"
             ),
         }
         db.session.add_all(users.values())
@@ -54,7 +60,10 @@ def seed() -> None:
                 ),
                 start_time=base_date + timedelta(days=7, hours=19 - base_date.hour),
                 end_time=base_date + timedelta(days=7, hours=23 - base_date.hour),
-                price=Decimal("39.00"),
+                general_price=Decimal("39.00"),
+                general_tickets=500,
+                vip_price=Decimal("59.00"),
+                vip_tickets=300,
                 status="Open",
                 category="Festival",
                 image_url="img/hero1.jpg",
@@ -65,7 +74,10 @@ def seed() -> None:
                 description="Smooth jazz ensembles with a relaxed picnic vibe by the river.",
                 start_time=base_date + timedelta(days=10, hours=18 - base_date.hour),
                 end_time=base_date + timedelta(days=10, hours=21 - base_date.hour),
-                price=Decimal("25.00"),
+                general_price=Decimal("59.00"),
+                general_tickets=500,
+                vip_price=Decimal("89.00"),
+                vip_tickets=300,
                 status="Open",
                 category="Jazz",
                 image_url="img/jazz.jpg",
@@ -76,7 +88,10 @@ def seed() -> None:
                 description="A full orchestral program celebrating modern film scores.",
                 start_time=base_date + timedelta(days=14, hours=20 - base_date.hour),
                 end_time=base_date + timedelta(days=14, hours=22 - base_date.hour),
-                price=Decimal("65.00"),
+                general_price=Decimal("30.00"),
+                general_tickets=500,
+                vip_price=Decimal("60.00"),
+                vip_tickets=300,
                 status="Sold Out",
                 category="Classical",
                 image_url="img/symphony.jpg",
@@ -87,7 +102,10 @@ def seed() -> None:
                 description="Queensland's best crews battle it out with live DJs and guest MCs.",
                 start_time=base_date + timedelta(days=3, hours=20 - base_date.hour),
                 end_time=base_date + timedelta(days=3, hours=23 - base_date.hour),
-                price=Decimal("20.00"),
+                general_price=Decimal("50.00"),
+                general_tickets=500,
+                vip_price=Decimal("75.00"),
+                vip_tickets=300,
                 status="Open",
                 category="Hip Hop",
                 image_url="img/hiphop.jpg",
